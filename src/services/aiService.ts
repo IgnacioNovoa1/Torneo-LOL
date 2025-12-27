@@ -5,7 +5,7 @@ import { tournamentData } from '../data/tournamentInfo';
 dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export async function consultAdminAI(userQuestion: string) {
     const infoContext = JSON.stringify(tournamentData, null, 2);
@@ -31,6 +31,6 @@ export async function consultAdminAI(userQuestion: string) {
         return response.text();
     } catch (error) {
         console.error("Gemini Error:", error);
-        return "El sistema de consultas administrativo está reiniciando sus servidores neurales.";
+        return "Ha ocurrido un error inesperado.";
     }
 }
