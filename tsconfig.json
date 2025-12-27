@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    /* Configuración de Módulos */
+    "target": "ES2020", /* Versión de JS moderna */
+    "module": "commonjs", /* Node.js estándar usa CommonJS */
+    "moduleResolution": "node", /* Resolución de módulos estilo Node */
+    "esModuleInterop": true, /* Permite importar módulos CommonJS como ES6 */
+    "forceConsistentCasingInFileNames": true, /* Evita errores de mayúsculas/minúsculas en Linux */
+    "strict": true, /* Mantiene el tipado estricto (buena práctica) */
+    "skipLibCheck": true, /* Salta chequeo de tipos en librerías externas (ahorra errores) */
+    /* Rutas */
+    "outDir": "./dist", /* Donde se guardará el código compilado */
+    "rootDir": "./src", /* Donde está tu código fuente */
+    /* LA CORRECCIÓN CRÍTICA */
+    "verbatimModuleSyntax": false /* Desactivamos la regla que te causó el error */
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
