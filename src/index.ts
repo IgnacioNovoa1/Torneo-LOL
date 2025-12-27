@@ -1,28 +1,85 @@
-import { Client, GatewayIntentBits, Events } from 'discord.js';
+// src/index.ts
+import { Client, GatewayIntentBits, Events, TextChannel } from 'discord.js';
 import dotenv from 'dotenv';
+import express from 'express';
+import { Server } from 'socket.io';
+import http from 'http';
+
+// Comandos
 import * as inscribirCommand from './commands/inscribir';
-import { LeagueClientService } from './services/lcu';
+import * as askCommand from './commands/ask';
+
 dotenv.config();
+const PORT = process.env.PORT || 3000;
+const SECRET_KEY = process.env.TOURNAMENT_SECRET;
+const CHANNEL_ID_NOTIFICACIONES = process.env.DISCORD_ANNOUNCEMENT_CHANNEL;
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+app.get('/', (req, res) => {
+    res.send('Admin Bot Online. Sistema administrativo activo.');
+});
+
+
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (token === SECRET_KEY) next();
+    else next(new Error("Acceso Denegado"));
+});
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
 });
-const leagueService = new LeagueClientService();
+
+let isMatchLive = false;
+
+io.on('connection', (socket) => {
+    console.log(`🔌 Agente Local Conectado: ${socket.id}`);
+
+    socket.on('champSelectUpdate', async (data) => {
+        if (data && data.timer && !isMatchLive) {
+            
+            if (data.timer.phase === 'BAN_PICK' || data.timer.phase === 'PLANNING') {
+                isMatchLive = true;
+                console.log("DETECTADO INICIO DE DRAFT");
+
+                if (CHANNEL_ID_NOTIFICACIONES) {
+                    const channel = await client.channels.fetch(CHANNEL_ID_NOTIFICACIONES) as TextChannel;
+                    if (channel) {
+                        await channel.send("**¡ATENCIÓN!** Ha comenzado una nueva fase de Selección y Bloqueos. ¡Conéctense al Stream!");
+                    }
+                }
+            }
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Agente Local desconectado');
+        isMatchLive = false;
+    });
+});
 
 client.once(Events.ClientReady, c => {
-    console.log(`🤖 Bot conectado como: ${c.user.tag}`);
-    leagueService.start();
+    console.log(`Bot conectado como: ${c.user.tag}`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isChatInputCommand()) return;
+
     if (interaction.commandName === 'inscribir') {
         await inscribirCommand.execute(interaction);
+    } else if (interaction.commandName === 'duda') {
+        await askCommand.execute(interaction);
     }
 });
+
 client.login(process.env.DISCORD_TOKEN);
+server.listen(PORT, () => {
+    console.log(`Sistema Administrativo escuchando en puerto ${PORT}`);
+});

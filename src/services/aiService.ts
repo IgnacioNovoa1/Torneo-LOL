@@ -1,0 +1,36 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from 'dotenv';
+import { tournamentData } from '../data/tournamentInfo';
+
+dotenv.config();
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+export async function consultAdminAI(userQuestion: string) {
+    const infoContext = JSON.stringify(tournamentData, null, 2);
+
+    const prompt = `
+    Eres el ASISTENTE ADMINISTRATIVO oficial del torneo de League of Legends llamado "${tournamentData.nombre}".
+    
+    TU BASE DE CONOCIMIENTO (ESTRICTA):
+    ${infoContext}
+    
+    INSTRUCCIONES:
+    1. Responde dudas sobre horarios, reglas, premios o equipos basándote ÚNICAMENTE en la información de arriba.
+    2. Si te preguntan algo que no está en la lista (como "¿Quién ganará?"), di que no tienes esa información o que eres imparcial.
+    3. Tu tono es profesional, servicial y directo.
+    4. NO inventes fechas ni premios.
+    
+    PREGUNTA DEL USUARIO: "${userQuestion}"
+    `;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text();
+    } catch (error) {
+        console.error("Gemini Error:", error);
+        return "El sistema de consultas administrativo está reiniciando sus servidores neurales.";
+    }
+}
