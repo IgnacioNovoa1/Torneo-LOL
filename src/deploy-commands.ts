@@ -1,6 +1,7 @@
 import { REST, Routes } from 'discord.js';
 import dotenv from 'dotenv';
 import * as inscribirCommand from './commands/inscribir';
+import * as askCommand from './commands/ask';
 
 dotenv.config();
 const { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
@@ -11,6 +12,7 @@ if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
 
 const commands = [
     inscribirCommand.data.toJSON(),
+    askCommand.data.toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);

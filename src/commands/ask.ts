@@ -15,5 +15,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const question = interaction.options.getString('pregunta', true);
     const answer = await consultAdminAI(question);
 
-    await interaction.editReply(`❓ **Pregunta:** ${question}\n\n📋 **Admin AI:** ${answer}`);
+    await interaction.editReply(`**Pregunta:** ${question}\n\n **Admin AI:** ${answer}`);
 }
