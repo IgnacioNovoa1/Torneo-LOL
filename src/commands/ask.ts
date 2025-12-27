@@ -10,10 +10,20 @@ export const data = new SlashCommandBuilder()
             .setRequired(true));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply(); 
+    try {
+        await interaction.deferReply(); 
+    
+        const question = interaction.options.getString('pregunta', true);
+        const answer = await consultAdminAI(question);
+    
+        await interaction.editReply(`**Pregunta:** ${question}\n\n**Respuesta:** ${answer}`);
 
-    const question = interaction.options.getString('pregunta', true);
-    const answer = await consultAdminAI(question);
-
-    await interaction.editReply(`**Pregunta:** ${question}\n\n**Respuesta:** ${answer}`);
+    } catch (error) {
+        console.error("Error en comando /duda:", error);
+        if (interaction.deferred || interaction.replied){
+            await interaction.editReply({ content: "Ocurrió un error al procesar tu pregunta."});
+        } else {
+            await interaction.reply({ content: "Ocurrió un error al procesar tu pregunta.", ephemeral: true});
+        }
+    }
 }
