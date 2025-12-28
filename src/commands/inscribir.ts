@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, ChannelType, PermissionFlagsBits, ChatInputCommandInteraction, Guild } from 'discord.js';
+import { Team } from '../models/Team';
 
 export const data = new SlashCommandBuilder()
     .setName('inscribir')
@@ -22,21 +23,33 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const teamName = interaction.options.getString('nombre_equipo', true);
     const captainUser = interaction.options.getUser('capitan', true);
     const guild = interaction.guild;
+    const safeName = teamName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-');
+    const existingTeam = await Team.findOne({ name: teamName });
+    if (existingTeam) {
+        await interaction.editReply(`El equipo **${teamName}** ya está inscrito.`);
+        return;
+    }
+
+    let teamRole;
+    let category;
 
     try {
-        const teamRole = await guild.roles.create({
+        teamRole = await guild.roles.create({
             name: teamName,
             color: 'Blue',
             reason: `Inscripción automática por ${interaction.user.tag}`,
         });
 
-        const category = await guild.channels.create({
+        category = await guild.channels.create({
             name: `--- ${teamName} ---`,
             type: ChannelType.GuildCategory,
         });
 
         await guild.channels.create({
-            name: `chat-${teamName.toLowerCase().replace(/\s+/g, '-')}`,
+            name: `chat-${safeName}`,
             type: ChannelType.GuildText,
             parent: category.id,
             permissionOverwrites: [
@@ -47,6 +60,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 {
                     id: teamRole.id,
                     allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                },
+                {
+                    id: captainUser.id,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ManageChannels,
+                    ],
                 },
                 {
                     id: interaction.client.user.id,
@@ -70,13 +91,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 }
             ],
         });
+
         const member = await guild.members.fetch(captainUser.id);
         await member.roles.add(teamRole);
 
-        await interaction.editReply(`**Éxito:** Equipo **${teamName}** creado.\n Capitán: ${captainUser}\n Canales privados configurados.`);
+        const newTeam = new Team({
+            name: teamName,
+            captainId: captainUser.id,
+            roleId: teamRole.id,
+            channelCategoryId: category.id
+        });
+
+        await newTeam.save();
+
+        await interaction.editReply(
+            `**Éxito:** Equipo **${teamName}** creado.\n Capitán: ${captainUser}\n Canales privados configurados.`
+        );
+
+        console.log("Equipo guardado en BD");
 
     } catch (error) {
         console.error("Error creando equipo:", error);
-        await interaction.editReply('Error crítico: Asegúrate de que el rol del Bot esté por encima de los demás roles en la configuración del servidor.');
+        if (teamRole) await teamRole.delete().catch(() => {});
+        if (category) await category.delete().catch(() => {});
+
+        await interaction.editReply(
+            'Error crítico: Asegúrate de que el rol del Bot esté por encima de los demás roles en la configuración del servidor.'
+        );
     }
 }
