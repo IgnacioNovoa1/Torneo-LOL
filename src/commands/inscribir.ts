@@ -27,9 +27,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-');
-    const existingTeam = await Team.findOne({ name: teamName });
-    if (existingTeam) {
-        await interaction.editReply(`El equipo **${teamName}** ya está inscrito.`);
+    try {
+        const existingTeam = await Team.findOne({ name: teamName });
+        if (existingTeam) {
+            await interaction.editReply(`El equipo **${teamName}** ya está inscrito.`);
+            return;
+        }
+    } catch (dbError) {
+        console.error("Error conectando a BD:", dbError);
+        await interaction.editReply("Error de conexión con la base de datos. Intenta nuevamente.");
         return;
     }
 
@@ -42,12 +48,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             color: 'Blue',
             reason: `Inscripción automática por ${interaction.user.tag}`,
         });
-
         category = await guild.channels.create({
             name: `--- ${teamName} ---`,
             type: ChannelType.GuildCategory,
         });
-
         await guild.channels.create({
             name: `chat-${safeName}`,
             type: ChannelType.GuildText,
@@ -71,11 +75,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 },
                 {
                     id: interaction.client.user.id,
-                    allow: [PermissionFlagsBits.ViewChannel],
+                    allow: [PermissionFlagsBits.ViewChannel], 
                 }
             ],
         });
-
         await guild.channels.create({
             name: `Voz ${teamName}`,
             type: ChannelType.GuildVoice,
@@ -91,32 +94,33 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 }
             ],
         });
-
         const member = await guild.members.fetch(captainUser.id);
         await member.roles.add(teamRole);
-
+        
         const newTeam = new Team({
             name: teamName,
             captainId: captainUser.id,
+            captainName: captainUser.tag,
             roleId: teamRole.id,
-            channelCategoryId: category.id
+            categoryId: category.id
         });
 
         await newTeam.save();
 
+        console.log(`Equipo ${teamName} guardado en BD y Discord.`);
+
         await interaction.editReply(
-            `**Éxito:** Equipo **${teamName}** creado.\n Capitán: ${captainUser}\n Canales privados configurados.`
+            `**¡Éxito!** Equipo **${teamName}** registrado.\nCapitán: ${captainUser}.`
         );
 
-        console.log("Equipo guardado en BD");
-
     } catch (error) {
-        console.error("Error creando equipo:", error);
-        if (teamRole) await teamRole.delete().catch(() => {});
-        if (category) await category.delete().catch(() => {});
-
+        console.error("Error creando equipo (Rollback iniciado):", error);
+        if (teamRole) await teamRole.delete().catch(e => console.error("Error borrando rol:", e));
+        if (category) {
+            await category.delete().catch(e => console.error("Error borrando categoría:", e));
+        }
         await interaction.editReply(
-            'Error crítico: Asegúrate de que el rol del Bot esté por encima de los demás roles en la configuración del servidor.'
+            '**Error crítico:** Hubo un fallo al registrar el equipo. Se han revertido los cambios en Discord (si fue posible).\nVerifica los permisos del Bot (debe estar arriba de los demás roles).'
         );
     }
 }
