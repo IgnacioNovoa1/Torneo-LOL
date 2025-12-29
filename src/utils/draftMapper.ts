@@ -56,30 +56,41 @@ export function mapLcuToDraft(lcu: any): DraftState {
                 status
             };
         });
+const buildBans = (team: any[], isBlue: boolean): DraftPick[] => {
+    const bans: DraftPick[] = [];
 
-    const normalizeBans = (bans: any[]): DraftPick[] => {
-        const result: DraftPick[] = [];
+    const teamCellIds = team.map(p => p.cellId);
 
-        for (let i = 0; i < 5; i++) {
-            const id = bans?.[i];
-            const champId = typeof id === 'number' && id > 0 ? id : 0;
+    const banActions = lcu.actions
+        .flat()
+        .filter((a: any) =>
+            a.type === 'ban' &&
+            teamCellIds.includes(a.actorCellId)
+        );
 
-            result.push({
-                cellId: 0,
-                championId: champId,
-                championName: champId ? riotService.getChampName(champId) : '',
-                championImg: champId ? riotService.getChampImage(champId) : '',
-                status: champId ? 'locked' : 'none'
-            });
-        }
+    for (let i = 0; i < 5; i++) {
+        const action = banActions[i];
+        const champId = action?.championId > 0 && action.completed
+            ? action.championId
+            : 0;
 
-        return result;
-    };
+        bans.push({
+            cellId: 0,
+            championId: champId,
+            championName: champId ? riotService.getChampName(champId) : '',
+            championImg: champId ? riotService.getChampImage(champId) : '',
+            status: champId ? 'locked' : 'none'
+        });
+    }
+
+    return bans;
+};
+
 
     state.blueTeam.picks = buildPicks(lcu.myTeam || []);
     state.redTeam.picks = buildPicks(lcu.theirTeam || []);
-    state.blueTeam.bans = normalizeBans(lcu.bans?.myTeamBans || []);
-    state.redTeam.bans = normalizeBans(lcu.bans?.theirTeamBans || []);
+    state.blueTeam.bans = buildBans(lcu.bans?.myTeamBans || [], true);
+    state.redTeam.bans = buildBans(lcu.bans?.theirTeamBans || [], false);
 
     return state;
 }
