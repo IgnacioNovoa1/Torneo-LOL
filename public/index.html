@@ -200,17 +200,36 @@ function initSlots(containerId, count, html) {
 }
 
 function renderBans(bans, containerId) {
-    initSlots(containerId, 5, `<div class="ban-circle"><img></div>`);
-    const slots = document.getElementById(containerId).children;
+    const container = document.getElementById(containerId);
+
+    if (container.children.length === 0) {
+        for (let i = 0; i < 5; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'ban-circle';
+
+            const img = document.createElement('img');
+            slot.appendChild(img);
+
+            container.appendChild(slot);
+        }
+    }
+
+    const slots = container.children;
+
     for (let i = 0; i < 5; i++) {
         const img = slots[i].querySelector('img');
-        if (bans[i] && bans[i].championId !== 0) {
-            if (img.src !== bans[i].championImg) img.src = bans[i].championImg;
+        const ban = bans[i];
+
+        if (ban && ban.championId > 0) {
+            if (img.src !== ban.championImg) {
+                img.src = ban.championImg;
+            }
         } else {
             img.src = '';
         }
     }
 }
+
 
 function renderPicks(picks, containerId, side) {
     initSlots(containerId, 5, `<div class="pick-card"><img><span class="pick-name"></span></div>`);
