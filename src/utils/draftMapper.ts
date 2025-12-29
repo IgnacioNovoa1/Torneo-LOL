@@ -45,33 +45,41 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
             let status: DraftPick['status'] = 'none';
 
-            if (act) {
-                status = act.completed ? 'locked' : 'picking';
-            } else if (champId !== 0) {
-                status = 'locked';
-            }
+            if (act) status = act.completed ? 'locked' : 'picking';
+            else if (champId > 0) status = 'locked';
 
             return {
                 cellId: player.cellId,
-                championId: champId,
-                championName: riotService.getChampName(champId),
-                championImg: riotService.getChampImage(champId),
+                championId: champId > 0 ? champId : 0,
+                championName: champId > 0 ? riotService.getChampName(champId) : '',
+                championImg: champId > 0 ? riotService.getChampImage(champId) : '',
                 status
             };
         });
 
-    const mapBan = (id: number): DraftPick => ({
-        cellId: 0,
-        championId: id,
-        championName: riotService.getChampName(id),
-        championImg: riotService.getChampImage(id),
-        status: 'locked'
-    });
+    const normalizeBans = (bans: any[]): DraftPick[] => {
+        const result: DraftPick[] = [];
+
+        for (let i = 0; i < 5; i++) {
+            const id = bans?.[i];
+            const champId = typeof id === 'number' && id > 0 ? id : 0;
+
+            result.push({
+                cellId: 0,
+                championId: champId,
+                championName: champId ? riotService.getChampName(champId) : '',
+                championImg: champId ? riotService.getChampImage(champId) : '',
+                status: champId ? 'locked' : 'none'
+            });
+        }
+
+        return result;
+    };
 
     state.blueTeam.picks = buildPicks(lcu.myTeam || []);
     state.redTeam.picks = buildPicks(lcu.theirTeam || []);
-    state.blueTeam.bans = (lcu.bans?.myTeamBans || []).map(mapBan);
-    state.redTeam.bans = (lcu.bans?.theirTeamBans || []).map(mapBan);
+    state.blueTeam.bans = normalizeBans(lcu.bans?.myTeamBans || []);
+    state.redTeam.bans = normalizeBans(lcu.bans?.theirTeamBans || []);
 
     return state;
 }
