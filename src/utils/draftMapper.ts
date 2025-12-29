@@ -2,14 +2,14 @@ import { riotService } from '../services/riotService';
 
 export interface DraftState {
     phase: string;
+    timer: number;
     blueTeam: TeamDraftInfo;
     redTeam: TeamDraftInfo;
-    timer: number;
 }
 
 interface TeamDraftInfo {
-    bans: DraftPick[];
     picks: DraftPick[];
+    bans: DraftPick[];
 }
 
 interface DraftPick {
@@ -20,74 +20,58 @@ interface DraftPick {
     status: 'picking' | 'locked' | 'none';
 }
 
-export function mapLcuToDraft(lcuData: any): DraftState {
-    const draftState: DraftState = {
-        phase: 'WAITING',
-        timer: 0,
-        blueTeam: { bans: [], picks: [] },
-        redTeam: { bans: [], picks: [] }
+export function mapLcuToDraft(lcu: any): DraftState {
+    const state: DraftState = {
+        phase: lcu?.timer?.phase || 'UNKNOWN',
+        timer: Math.floor((lcu?.timer?.adjustedTimeLeftInPhase || 0) / 1000),
+        blueTeam: { picks: [], bans: [] },
+        redTeam: { picks: [], bans: [] }
     };
 
-    if (!lcuData || !lcuData.actions) return draftState;
+    if (!lcu?.actions) return state;
 
-    draftState.phase = lcuData.timer?.phase || 'UNKNOWN';
-    draftState.timer = (lcuData.timer?.adjustedTimeLeftInPhase || 0) / 1000; 
-    const activeActionsMap = new Map();
-    for (const actionRow of lcuData.actions) {
-        for (const action of actionRow) {
-            if (action.isInProgress) {
-                activeActionsMap.set(action.actorCellId, action);
-            } else if (action.completed && !activeActionsMap.has(action.actorCellId)) {
-                activeActionsMap.set(action.actorCellId, action);
-            }
+    const active = new Map<number, any>();
+
+    lcu.actions.flat().forEach((a: any) => {
+        if (a.type === 'pick') {
+            active.set(a.actorCellId, a);
         }
-    }
+    });
 
-    const processTeam = (teamArray: any[]) => {
-        return teamArray.map(player => {
-            const cellId = player.cellId;
-            let champId = player.championId;
-            let status: 'picking' | 'locked' | 'none' = 'locked';
+    const buildPicks = (team: any[]): DraftPick[] =>
+        team.map(player => {
+            const act = active.get(player.cellId);
+            const champId = act ? act.championId : player.championId;
 
-            const action = activeActionsMap.get(cellId);
+            let status: DraftPick['status'] = 'none';
 
-            if (action) {
-                if (action.championId !== 0) {
-                    champId = action.championId;
-                }
-                status = action.completed ? 'locked' : 'picking';
-                
-                if (action.type === 'ban') {
-                    status = 'none'; 
-                    if (!action.completed) champId = 0; 
-                }
+            if (act) {
+                status = act.completed ? 'locked' : 'picking';
+            } else if (champId !== 0) {
+                status = 'locked';
             }
-
-            if (champId === 0) status = 'none';
 
             return {
-                cellId: cellId,
+                cellId: player.cellId,
                 championId: champId,
                 championName: riotService.getChampName(champId),
                 championImg: riotService.getChampImage(champId),
-                status: status
+                status
             };
         });
-    };
 
-    draftState.blueTeam.picks = processTeam(lcuData.myTeam || []);
-    draftState.redTeam.picks = processTeam(lcuData.theirTeam || []);
-
-    const mapBan = (id: number) => ({
+    const mapBan = (id: number): DraftPick => ({
         cellId: 0,
         championId: id,
         championName: riotService.getChampName(id),
         championImg: riotService.getChampImage(id),
-        status: 'locked' as const
+        status: 'locked'
     });
 
-    draftState.blueTeam.bans = (lcuData.bans?.myTeamBans || []).map(mapBan);
-    draftState.redTeam.bans = (lcuData.bans?.theirTeamBans || []).map(mapBan);
+    state.blueTeam.picks = buildPicks(lcu.myTeam || []);
+    state.redTeam.picks = buildPicks(lcu.theirTeam || []);
+    state.blueTeam.bans = (lcu.bans?.myTeamBans || []).map(mapBan);
+    state.redTeam.bans = (lcu.bans?.theirTeamBans || []).map(mapBan);
 
-    return draftState;
+    return state;
 }

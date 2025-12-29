@@ -1,292 +1,256 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Overlay Torneo LoL</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
+<meta charset="UTF-8">
+<title>LoL Tournament Draft</title>
 
-        body {
-            background: transparent;
-            font-family: 'Oswald', sans-serif;
-            margin: 0;
-            padding: 20px;
-            color: white;
-            text-shadow: 2px 2px 4px black;
-            overflow: hidden;
-        }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
 
-        #waiting {
-            text-align: center;
-            font-size: 2rem;
-            color: #ccc;
-            margin-top: 20%;
-        }
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: 'Oswald', sans-serif;
+    background: transparent;
+    color: white;
+    overflow: hidden;
+    text-shadow: 2px 2px 4px black;
+}
 
-        .draft-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-top: 50px;
-        }
+#waiting {
+    text-align: center;
+    font-size: 2rem;
+    margin-top: 20%;
+    color: #aaa;
+}
 
-        .team-column {
-            width: 320px;
-        }
+.draft-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 70px;
+}
 
-        .blue-team {
-            text-align: left;
-        }
+.team-column {
+    width: 340px;
+}
 
-        .red-team {
-            text-align: right;
-        }
+.team-header {
+    border-bottom: 4px solid;
+    padding-bottom: 5px;
+}
 
-        .team-header {
-            border-bottom: 4px solid;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-        }
+.blue-header {
+    border-color: #00a8ff;
+}
 
-        .blue-header {
-            border-color: #00a8ff;
-            color: #00a8ff;
-        }
+.red-header {
+    border-color: #ff4757;
+    text-align: right;
+}
 
-        .red-header {
-            border-color: #ff4757;
-            color: #ff4757;
-        }
+.team-header h2 {
+    margin: 0;
+    font-size: 2.6rem;
+}
 
-        .team-name {
-            font-size: 2.5rem;
-            text-transform: uppercase;
-            margin: 0;
-        }
+.bans-container {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
 
-        .bans-container {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px;
-            height: 40px;
-        }
+.red-team .bans-container {
+    justify-content: flex-end;
+}
 
-        .red-team .bans-container {
-            justify-content: flex-end;
-        }
+.ban-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.6);
+    overflow: hidden;
+    border: 2px solid #555;
+}
 
-        .ban-circle {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            border: 2px solid #555;
-            overflow: hidden;
-            background: rgba(0, 0, 0, 0.6);
-        }
+.ban-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+}
 
-        .ban-circle img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: grayscale(100%);
-        }
+.pick-card {
+    height: 90px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, rgba(0,0,0,.85), rgba(0,0,0,.4));
+    border-left: 4px solid #444;
+}
 
-        .timer-box {
-            background: rgba(0, 0, 0, 0.9);
-            padding: 10px 30px;
-            border-radius: 10px;
-            font-size: 5rem;
-            border: 3px solid gold;
-            min-width: 100px;
-            text-align: center;
-        }
+.red-team .pick-card {
+    flex-direction: row-reverse;
+    border-left: none;
+    border-right: 4px solid #444;
+    background: linear-gradient(-90deg, rgba(0,0,0,.85), rgba(0,0,0,.4));
+}
 
-        .pick-card {
-            height: 85px;
-            background: linear-gradient(90deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 100%);
-            margin-bottom: 8px;
-            border-left: 4px solid #444;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
+.pick-card img {
+    width: 90px;
+    height: 100%;
+    object-fit: cover;
+}
 
-        .red-team .pick-card {
-            flex-direction: row-reverse;
-            background: linear-gradient(-90deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 100%);
-            border-left: none;
-            border-right: 4px solid #444;
-        }
+.pick-name {
+    padding: 0 16px;
+    font-size: 1.6rem;
+}
 
-        .pick-card img {
-            width: 85px;
-            height: 100%;
-            object-fit: cover;
-        }
+.picking {
+    border-color: gold !important;
+    box-shadow: 0 0 15px rgba(255,215,0,.4);
+}
 
-        .pick-name {
-            padding: 0 15px;
-            font-size: 1.5rem;
-            z-index: 2;
-        }
+.locked-blue {
+    border-color: #00a8ff !important;
+}
 
-        .picking {
-            border-color: gold !important;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-        }
+.locked-red {
+    border-color: #ff4757 !important;
+}
 
-        .picking img {
-            animation: pulse 1s infinite alternate;
-        }
+.timer-box {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 5rem;
+    padding: 10px 35px;
+    border-radius: 12px;
+    border: 3px solid gold;
+    background: rgba(0,0,0,.9);
+}
+</style>
 
-        .locked-blue {
-            border-color: #00a8ff !important;
-        }
-
-        .locked-red {
-            border-color: #ff4757 !important;
-        }
-
-        @keyframes pulse {
-            0% {
-                opacity: 0.7;
-                transform: scale(1);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1.05);
-            }
-        }
-    </style>
-    <script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
 
-    <div id="waiting">Esperando conexión...</div>
+<div id="waiting">Esperando conexión...</div>
 
-    <div id="app" style="display: none;">
-        <div style="position: absolute; left: 50%; transform: translateX(-50%); top: 20px;">
-            <div class="timer-box" id="timer">00</div>
+<div id="app" style="display:none">
+    <div class="timer-box" id="timer">00</div>
+
+    <div class="draft-container">
+        <div class="team-column blue-team">
+            <div class="team-header blue-header">
+                <h2 id="blue-name">BLUE TEAM</h2>
+                <div id="blue-bans" class="bans-container"></div>
+            </div>
+            <div id="blue-picks"></div>
         </div>
 
-        <div class="draft-container">
-            <div class="team-column blue-team">
-                <div class="team-header blue-header">
-                    <h2 class="team-name">BLUE</h2>
-                    <div id="blue-bans" class="bans-container"></div>
-                </div>
-                <div id="blue-picks"></div>
+        <div class="team-column red-team">
+            <div class="team-header red-header">
+                <h2 id="red-name">RED TEAM</h2>
+                <div id="red-bans" class="bans-container"></div>
             </div>
-
-            <div class="team-column red-team">
-                <div class="team-header red-header">
-                    <h2 class="team-name">RED</h2>
-                    <div id="red-bans" class="bans-container"></div>
-                </div>
-                <div id="red-picks"></div>
-            </div>
+            <div id="red-picks"></div>
         </div>
     </div>
+</div>
 
-    <script>
-        const socket = io();
-        const app = document.getElementById('app');
-        const waiting = document.getElementById('waiting');
-        const timerEl = document.getElementById('timer');
+<script>
+const socket = io();
+const waiting = document.getElementById('waiting');
+const app = document.getElementById('app');
+const timerEl = document.getElementById('timer');
 
-        let localTimerValue = 0;
-        let timerInterval = null;
+let localTimer = 0;
+let interval = null;
 
-        function startLocalTimer(serverTime) {
-            localTimerValue = Math.floor(serverTime);
-            updateTimerVisual();
-
-            if (timerInterval) clearInterval(timerInterval);
-
-            timerInterval = setInterval(() => {
-                if (localTimerValue > 0) {
-                    localTimerValue--;
-                    updateTimerVisual();
-                } else {
-                    clearInterval(timerInterval);
-                }
-            }, 1000);
+function startTimer(value) {
+    localTimer = Math.floor(value);
+    updateTimer();
+    clearInterval(interval);
+    interval = setInterval(() => {
+        if (localTimer > 0) {
+            localTimer--;
+            updateTimer();
         }
+    }, 1000);
+}
 
-        function updateTimerVisual() {
-            timerEl.innerText = localTimerValue < 10 ? `0${localTimerValue}` : localTimerValue;
+function updateTimer() {
+    timerEl.innerText = localTimer < 10 ? `0${localTimer}` : localTimer;
+    timerEl.style.color = localTimer <= 10 ? '#ff4757' : 'white';
+}
 
-            if (localTimerValue <= 10) timerEl.style.color = '#ff4757';
-            else timerEl.style.color = 'white';
+function initSlots(containerId, count, html) {
+    const c = document.getElementById(containerId);
+    if (c.children.length === 0) {
+        for (let i = 0; i < count; i++) {
+            const d = document.createElement('div');
+            d.innerHTML = html;
+            d.firstChild.className = html.includes('ban') ? 'ban-circle' : 'pick-card';
+            c.appendChild(d.firstChild);
         }
+    }
+}
 
-        socket.on('web-update', (data) => {
-            if (!data) return;
-
-            waiting.style.display = 'none';
-            app.style.display = 'block';
-
-            if (Math.abs(localTimerValue - data.timer) > 2) {
-                startLocalTimer(data.timer);
-            }
-
-            renderPicks(data.blueTeam.picks, 'blue-picks', 'blue');
-            renderPicks(data.redTeam.picks, 'red-picks', 'red');
-
-            renderBans(data.blueTeam.bans, 'blue-bans');
-            renderBans(data.redTeam.bans, 'red-bans');
-        });
-
-        function renderPicks(picks, containerId, side) {
-            const container = document.getElementById(containerId);
-
-            if (container.children.length === 0) {
-                picks.forEach(() => {
-                    const div = document.createElement('div');
-                    div.className = 'pick-card';
-                    div.innerHTML = `<img src=""><span class="pick-name"></span>`;
-                    container.appendChild(div);
-                });
-            }
-
-            Array.from(container.children).forEach((div, index) => {
-                const pick = picks[index];
-                if (!pick) return;
-
-                const img = div.querySelector('img');
-                const span = div.querySelector('.pick-name');
-
-                div.className = `pick-card ${side}-card`;
-                if (pick.status === 'picking') div.classList.add('picking');
-                if (pick.status === 'locked') div.classList.add(side === 'blue' ? 'locked-blue' : 'locked-red');
-
-                const placeholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                const newImg = pick.championId !== 0 ? pick.championImg : placeholder;
-
-                if (img.src !== newImg) img.src = newImg;
-
-                span.innerText = pick.championId !== 0 ? pick.championName : '';
-            });
+function renderBans(bans, containerId) {
+    initSlots(containerId, 5, `<div class="ban-circle"><img></div>`);
+    const slots = document.getElementById(containerId).children;
+    for (let i = 0; i < 5; i++) {
+        const img = slots[i].querySelector('img');
+        if (bans[i] && bans[i].championId !== 0) {
+            if (img.src !== bans[i].championImg) img.src = bans[i].championImg;
+        } else {
+            img.src = '';
         }
+    }
+}
 
-        function renderBans(bans, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
+function renderPicks(picks, containerId, side) {
+    initSlots(containerId, 5, `<div class="pick-card"><img><span class="pick-name"></span></div>`);
+    const slots = document.getElementById(containerId).children;
 
-            bans.forEach(ban => {
-                const div = document.createElement('div');
-                div.className = 'ban-circle';
-                if (ban.championId !== 0) {
-                    div.innerHTML = `<img src="${ban.championImg}">`;
-                }
-                container.appendChild(div);
-            });
+    picks.forEach((pick, i) => {
+        const card = slots[i];
+        const img = card.querySelector('img');
+        const name = card.querySelector('.pick-name');
+
+        card.classList.remove('picking', 'locked-blue', 'locked-red');
+
+        if (pick.status === 'picking') card.classList.add('picking');
+        if (pick.status === 'locked') card.classList.add(side === 'blue' ? 'locked-blue' : 'locked-red');
+
+        if (pick.championId !== 0) {
+            if (img.src !== pick.championImg) img.src = pick.championImg;
+            name.innerText = pick.championName;
+        } else {
+            img.src = '';
+            name.innerText = '';
         }
-    </script>
+    });
+}
+
+socket.on('web-update', data => {
+    if (!data) return;
+    waiting.style.display = 'none';
+    app.style.display = 'block';
+
+    if (data.timer > localTimer || localTimer === 0) {
+        startTimer(data.timer);
+    }
+
+    renderBans(data.blueTeam.bans, 'blue-bans');
+    renderBans(data.redTeam.bans, 'red-bans');
+    renderPicks(data.blueTeam.picks, 'blue-picks', 'blue');
+    renderPicks(data.redTeam.picks, 'red-picks', 'red');
+});
+</script>
+
 </body>
-
 </html>
