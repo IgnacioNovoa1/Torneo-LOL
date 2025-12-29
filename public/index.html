@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay Torneo - FrancoCoss</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
+        
+        body { 
+            background: transparent;
+            font-family: 'Oswald', sans-serif; 
+            margin: 0; padding: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px black;
+        }
+
+        #waiting { text-align: center; font-size: 2rem; color: #ccc; margin-top: 20%; }
+
+        .draft-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 50px;
+        }
+        .team-column { width: 300px; }
+        .blue-team { text-align: left; }
+        .red-team { text-align: right; }
+
+        .team-title {
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            border-bottom: 4px solid;
+            margin-bottom: 10px;
+        }
+        .blue-title { color: #00a8ff; border-color: #00a8ff; }
+        .red-title { color: #ff4757; border-color: #ff4757; }
+        .timer-box {
+            background: rgba(0,0,0,0.8);
+            padding: 10px 30px;
+            border-radius: 10px;
+            font-size: 4rem;
+            border: 2px solid gold;
+        }
+
+        .pick-card {
+            height: 80px;
+            background: rgba(0,0,0,0.7);
+            margin-bottom: 8px;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .pick-card img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+        }
+
+        .pick-name {
+            padding: 0 15px;
+            font-size: 1.5rem;
+            z-index: 2;
+        }
+
+        .red-team .pick-card { flex-direction: row-reverse; }
+        .picking { animation: pulse 1.5s infinite; background: rgba(255, 255, 255, 0.1); }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+    <div id="waiting">Esperando conexión con el Cliente...</div>
+
+    <div id="app" style="display: none;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span class="timer-box" id="timer">00</span>
+        </div>
+
+        <div class="draft-container">
+            <div class="team-column blue-team">
+                <div class="team-title blue-title">BLUE SIDE</div>
+                <div id="blue-picks"></div>
+            </div>
+
+            <div class="team-column red-team">
+                <div class="team-title red-title">RED SIDE</div>
+                <div id="red-picks"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        const app = document.getElementById('app');
+        const waiting = document.getElementById('waiting');
+
+        socket.on('web-update', (data) => {
+            if(!data) return;
+            waiting.style.display = 'none';
+            app.style.display = 'block';
+            document.getElementById('timer').innerText = data.timer;
+            renderPicks(data.blueTeam.picks, 'blue-picks');
+            renderPicks(data.redTeam.picks, 'red-picks');
+        });
+
+        function renderPicks(picks, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = ''; 
+
+            picks.forEach(pick => {
+                const div = document.createElement('div');
+                div.className = `pick-card ${pick.championId === 0 ? 'picking' : ''}`;
+                const imgUrl = pick.championId !== 0 ? pick.championImg : 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png';
+                
+                div.innerHTML = `
+                    <img src="${imgUrl}" alt="${pick.championName}">
+                    <span class="pick-name">${pick.championName}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>

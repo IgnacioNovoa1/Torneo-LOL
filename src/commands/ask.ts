@@ -3,7 +3,7 @@ import { consultAdminAI } from '../services/aiService';
 
 export const data = new SlashCommandBuilder()
     .setName('duda')
-    .setDescription('Consulta administrativa sobre el torneo (Horarios, Premios, Reglas)')
+    .setDescription('Consulta sobre el torneo (Horarios, Premios, Reglas, Equipos)')
     .addStringOption(option =>
         option.setName('pregunta')
             .setDescription('Ej: ¿Cuándo es la final? / ¿Cuáles son los premios?')
