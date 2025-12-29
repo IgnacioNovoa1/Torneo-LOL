@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Overlay Torneo - FrancoCoss</title>
+    <title>Overlay Torneo LoL</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
         
@@ -15,80 +15,116 @@
         }
 
         #waiting { text-align: center; font-size: 2rem; color: #ccc; margin-top: 20%; }
-
+        
         .draft-container {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-top: 50px;
         }
-        .team-column { width: 300px; }
+
+        .team-column { width: 320px; }
         .blue-team { text-align: left; }
         .red-team { text-align: right; }
 
-        .team-title {
-            font-size: 2.5rem;
-            text-transform: uppercase;
+        .team-header {
             border-bottom: 4px solid;
             margin-bottom: 10px;
+            padding-bottom: 5px;
         }
-        .blue-title { color: #00a8ff; border-color: #00a8ff; }
-        .red-title { color: #ff4757; border-color: #ff4757; }
+        .blue-header { border-color: #00a8ff; color: #00a8ff; }
+        .red-header { border-color: #ff4757; color: #ff4757; }
+
+        .team-name { font-size: 2.5rem; text-transform: uppercase; margin: 0; }
+        .bans-container {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            height: 40px;
+        }
+        .red-team .bans-container { justify-content: flex-end; }
+        
+        .ban-circle {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 2px solid #555;
+            overflow: hidden;
+            background: rgba(0,0,0,0.6);
+        }
+        .ban-circle img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); }
+
         .timer-box {
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             padding: 10px 30px;
             border-radius: 10px;
-            font-size: 4rem;
-            border: 2px solid gold;
+            font-size: 5rem;
+            border: 3px solid gold;
+            min-width: 100px;
+            text-align: center;
         }
 
         .pick-card {
-            height: 80px;
-            background: rgba(0,0,0,0.7);
+            height: 85px;
+            background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
             margin-bottom: 8px;
-            border: 1px solid #555;
+            border-left: 4px solid #444;
             display: flex;
             align-items: center;
             overflow: hidden;
-            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .red-team .pick-card { 
+            flex-direction: row-reverse; 
+            background: linear-gradient(-90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
+            border-left: none;
+            border-right: 4px solid #444;
         }
         
         .pick-card img {
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 100%;
             object-fit: cover;
         }
 
-        .pick-name {
-            padding: 0 15px;
-            font-size: 1.5rem;
-            z-index: 2;
+        .pick-name { padding: 0 15px; font-size: 1.5rem; z-index: 2; }
+        .picking {
+            border-color: gold !important;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
         }
+        .picking img {
+            animation: pulse 1s infinite alternate;
+        }
+        .locked-blue { border-color: #00a8ff !important; }
+        .locked-red { border-color: #ff4757 !important; }
 
-        .red-team .pick-card { flex-direction: row-reverse; }
-        .picking { animation: pulse 1.5s infinite; background: rgba(255, 255, 255, 0.1); }
-        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        @keyframes pulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 1; transform: scale(1.05); } }
 
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <div id="waiting">Esperando conexión con el Cliente...</div>
+    <div id="waiting">Esperando conexión...</div>
 
     <div id="app" style="display: none;">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <span class="timer-box" id="timer">00</span>
+        <div style="position: absolute; left: 50%; transform: translateX(-50%); top: 20px;">
+            <div class="timer-box" id="timer">00</div>
         </div>
 
         <div class="draft-container">
             <div class="team-column blue-team">
-                <div class="team-title blue-title">BLUE SIDE</div>
+                <div class="team-header blue-header">
+                    <h2 class="team-name">BLUE</h2>
+                    <div id="blue-bans" class="bans-container"></div> </div>
                 <div id="blue-picks"></div>
             </div>
 
             <div class="team-column red-team">
-                <div class="team-title red-title">RED SIDE</div>
+                <div class="team-header red-header">
+                    <h2 class="team-name">RED</h2>
+                    <div id="red-bans" class="bans-container"></div> </div>
                 <div id="red-picks"></div>
             </div>
         </div>
@@ -102,26 +138,52 @@
 
         socket.on('web-update', (data) => {
             if(!data) return;
+
             waiting.style.display = 'none';
             app.style.display = 'block';
+
             document.getElementById('timer').innerText = data.timer;
-            renderPicks(data.blueTeam.picks, 'blue-picks');
-            renderPicks(data.redTeam.picks, 'red-picks');
+
+            renderPicks(data.blueTeam.picks, 'blue-picks', 'blue');
+            renderPicks(data.redTeam.picks, 'red-picks', 'red');
+            renderBans(data.blueTeam.bans, 'blue-bans');
+            renderBans(data.redTeam.bans, 'red-bans');
         });
 
-        function renderPicks(picks, containerId) {
+        function renderPicks(picks, containerId, side) {
             const container = document.getElementById(containerId);
-            container.innerHTML = ''; 
+            container.innerHTML = '';
 
             picks.forEach(pick => {
                 const div = document.createElement('div');
-                div.className = `pick-card ${pick.championId === 0 ? 'picking' : ''}`;
-                const imgUrl = pick.championId !== 0 ? pick.championImg : 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png';
                 
+                let statusClass = '';
+                if (pick.status === 'picking') statusClass = 'picking';
+                else if (pick.status === 'locked') statusClass = side === 'blue' ? 'locked-blue' : 'locked-red';
+
+                div.className = `pick-card ${statusClass}`;
+
+                const imgUrl = pick.championId !== 0 ? pick.championImg : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                const nameDisplay = pick.championId !== 0 ? pick.championName : '';
+
                 div.innerHTML = `
-                    <img src="${imgUrl}" alt="${pick.championName}">
-                    <span class="pick-name">${pick.championName}</span>
+                    <img src="${imgUrl}">
+                    <span class="pick-name">${nameDisplay}</span>
                 `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderBans(bans, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            bans.forEach(ban => {
+                const div = document.createElement('div');
+                div.className = 'ban-circle';
+                if (ban.championId !== 0) {
+                    div.innerHTML = `<img src="${ban.championImg}" title="${ban.championName}">`;
+                }
                 container.appendChild(div);
             });
         }
