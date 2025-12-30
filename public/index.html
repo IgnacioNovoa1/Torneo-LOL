@@ -141,13 +141,26 @@
             display: flex;
             justify-content: space-between;
             width: 100%;
-            max-width: 1800px;
             padding: 0 40px;
-            position: relative;
+            position: fixed;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
         }
 
         .team-column {
             width: 420px;
+        }
+
+        .blue-team {
+            position: absolute;
+            left: 40px;
+        }
+
+        .red-team {
+            position: absolute;
+            right: 40px;
         }
 
         .team-header {
@@ -411,38 +424,7 @@
 
         /* Center decoration line */
         .draft-container::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 2px;
-            height: 80%;
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.2), transparent);
-        }
-
-        /* VS Badge in center */
-        .vs-badge {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 80px;
-            background: rgba(0, 0, 0, 0.95);
-            border: 3px solid gold;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            font-family: 'Bebas Neue', cursive;
-            letter-spacing: 2px;
-            color: gold;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
-            animation: fadeIn 1s ease-out 0.5s both;
-            z-index: 10;
+            display: none;
         }
     </style>
 
@@ -457,8 +439,6 @@
         <div class="timer-box normal" id="timer">00</div>
 
         <div class="draft-container">
-            <div class="vs-badge">VS</div>
-
             <div class="team-column blue-team">
                 <div class="team-header blue-header">
                     <h2 id="blue-name">BLUE SIDE</h2>
