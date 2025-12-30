@@ -695,41 +695,53 @@
                 return;
             }
 
-            // Check blue bans
+            // Check blue bans - solo cuando están completados
             for (let i = 0; i < newData.blueTeam.bans.length; i++) {
                 const newBan = newData.blueTeam.bans[i];
                 const oldBan = lastState.blueTeam.bans[i];
-                if (newBan.championId > 0 && (!oldBan || oldBan.championId !== newBan.championId)) {
+                // Solo mostrar si es un ban nuevo Y está locked
+                if (newBan.championId > 0 &&
+                    newBan.status === 'locked' &&
+                    (!oldBan || oldBan.championId !== newBan.championId || oldBan.status !== 'locked')) {
                     showChampionShowcase(newBan.championName, newBan.championImg, 'ban', 'blue');
                     break;
                 }
             }
 
-            // Check red bans
+            // Check red bans - solo cuando están completados
             for (let i = 0; i < newData.redTeam.bans.length; i++) {
                 const newBan = newData.redTeam.bans[i];
                 const oldBan = lastState.redTeam.bans[i];
-                if (newBan.championId > 0 && (!oldBan || oldBan.championId !== newBan.championId)) {
+                // Solo mostrar si es un ban nuevo Y está locked
+                if (newBan.championId > 0 &&
+                    newBan.status === 'locked' &&
+                    (!oldBan || oldBan.championId !== newBan.championId || oldBan.status !== 'locked')) {
                     showChampionShowcase(newBan.championName, newBan.championImg, 'ban', 'red');
                     break;
                 }
             }
 
-            // Check blue picks
+            // Check blue picks - solo cuando cambia de 'picking' a 'locked'
             for (let i = 0; i < newData.blueTeam.picks.length; i++) {
                 const newPick = newData.blueTeam.picks[i];
                 const oldPick = lastState.blueTeam.picks[i];
-                if (newPick.status === 'locked' && oldPick.status !== 'locked' && newPick.championId > 0) {
+                // Solo cuando se CONFIRMA el pick (pasa de picking/none a locked)
+                if (newPick.status === 'locked' &&
+                    oldPick.status !== 'locked' &&
+                    newPick.championId > 0) {
                     showChampionShowcase(newPick.championName, newPick.championImg, 'pick', 'blue');
                     break;
                 }
             }
 
-            // Check red picks
+            // Check red picks - solo cuando cambia de 'picking' a 'locked'
             for (let i = 0; i < newData.redTeam.picks.length; i++) {
                 const newPick = newData.redTeam.picks[i];
                 const oldPick = lastState.redTeam.picks[i];
-                if (newPick.status === 'locked' && oldPick.status !== 'locked' && newPick.championId > 0) {
+                // Solo cuando se CONFIRMA el pick (pasa de picking/none a locked)
+                if (newPick.status === 'locked' &&
+                    oldPick.status !== 'locked' &&
+                    newPick.championId > 0) {
                     showChampionShowcase(newPick.championName, newPick.championImg, 'pick', 'red');
                     break;
                 }
