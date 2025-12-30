@@ -429,6 +429,152 @@
         .draft-container::before {
             display: none;
         }
+
+        /* Champion Showcase Animation */
+        .champion-showcase {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 600px;
+            height: 700px;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .champion-showcase.show {
+            animation: showcaseAppear 2.5s ease-out forwards;
+        }
+
+        @keyframes showcaseAppear {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+
+            15% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 1;
+            }
+
+            25% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+
+            85% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+        }
+
+        .showcase-image {
+            width: 450px;
+            height: 450px;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+            border: 5px solid;
+        }
+
+        .showcase-image.blue-pick {
+            border-color: #00d4ff;
+            box-shadow: 0 0 80px rgba(0, 212, 255, 0.6);
+        }
+
+        .showcase-image.red-pick {
+            border-color: #ff4757;
+            box-shadow: 0 0 80px rgba(255, 71, 87, 0.6);
+        }
+
+        .showcase-image.ban {
+            border-color: #ff0000;
+            box-shadow: 0 0 80px rgba(255, 0, 0, 0.6);
+            filter: grayscale(100%);
+        }
+
+        .showcase-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .showcase-image.ban::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        .showcase-image.ban::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 8px;
+            background: #ff0000;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            box-shadow: 0 0 20px #ff0000;
+            z-index: 2;
+        }
+
+        .showcase-name {
+            margin-top: 30px;
+            font-size: 4rem;
+            font-family: 'Bebas Neue', cursive;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            text-shadow: 0 0 30px currentColor, 3px 3px 10px rgba(0, 0, 0, 0.9);
+        }
+
+        .showcase-name.blue-pick {
+            color: #00d4ff;
+        }
+
+        .showcase-name.red-pick {
+            color: #ff4757;
+        }
+
+        .showcase-name.ban {
+            color: #ff0000;
+        }
+
+        .showcase-label {
+            margin-top: 10px;
+            font-size: 2rem;
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .showcase-label.blue-pick {
+            color: #00d4ff;
+        }
+
+        .showcase-label.red-pick {
+            color: #ff4757;
+        }
+
+        .showcase-label.ban {
+            color: #ff0000;
+        }
     </style>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -437,6 +583,14 @@
 <body>
 
     <div id="waiting">Esperando Draft</div>
+
+    <div id="champion-showcase" class="champion-showcase">
+        <div class="showcase-image">
+            <img id="showcase-img" src="" alt="">
+        </div>
+        <div class="showcase-name" id="showcase-name"></div>
+        <div class="showcase-label" id="showcase-label"></div>
+    </div>
 
     <div id="app" style="display:none">
         <div class="timer-box normal" id="timer">00</div>
@@ -465,9 +619,14 @@
         const waiting = document.getElementById('waiting');
         const app = document.getElementById('app');
         const timerEl = document.getElementById('timer');
+        const showcaseEl = document.getElementById('champion-showcase');
+        const showcaseImg = document.getElementById('showcase-img');
+        const showcaseName = document.getElementById('showcase-name');
+        const showcaseLabel = document.getElementById('showcase-label');
 
         let localTimer = 0;
         let interval = null;
+        let lastState = null;
 
         function startTimer(value) {
             localTimer = Math.floor(value);
@@ -491,6 +650,92 @@
                 timerEl.classList.remove('warning');
                 timerEl.classList.add('normal');
             }
+        }
+
+        function showChampionShowcase(championName, championImg, type, side) {
+            const imageContainer = showcaseEl.querySelector('.showcase-image');
+
+            // Reset classes
+            imageContainer.classList.remove('blue-pick', 'red-pick', 'ban');
+            showcaseName.classList.remove('blue-pick', 'red-pick', 'ban');
+            showcaseLabel.classList.remove('blue-pick', 'red-pick', 'ban');
+
+            // Set content
+            showcaseImg.src = championImg;
+            showcaseName.innerText = championName;
+
+            // Set classes based on type
+            if (type === 'ban') {
+                imageContainer.classList.add('ban');
+                showcaseName.classList.add('ban');
+                showcaseLabel.classList.add('ban');
+                showcaseLabel.innerText = 'BANEADO';
+            } else {
+                const pickClass = side === 'blue' ? 'blue-pick' : 'red-pick';
+                imageContainer.classList.add(pickClass);
+                showcaseName.classList.add(pickClass);
+                showcaseLabel.classList.add(pickClass);
+                showcaseLabel.innerText = side === 'blue' ? 'BLUE SIDE' : 'RED SIDE';
+            }
+
+            // Trigger animation
+            showcaseEl.classList.remove('show');
+            void showcaseEl.offsetWidth; // Force reflow
+            showcaseEl.classList.add('show');
+
+            // Remove class after animation
+            setTimeout(() => {
+                showcaseEl.classList.remove('show');
+            }, 2500);
+        }
+
+        function detectChanges(newData) {
+            if (!lastState) {
+                lastState = JSON.parse(JSON.stringify(newData));
+                return;
+            }
+
+            // Check blue bans
+            for (let i = 0; i < newData.blueTeam.bans.length; i++) {
+                const newBan = newData.blueTeam.bans[i];
+                const oldBan = lastState.blueTeam.bans[i];
+                if (newBan.championId > 0 && (!oldBan || oldBan.championId !== newBan.championId)) {
+                    showChampionShowcase(newBan.championName, newBan.championImg, 'ban', 'blue');
+                    break;
+                }
+            }
+
+            // Check red bans
+            for (let i = 0; i < newData.redTeam.bans.length; i++) {
+                const newBan = newData.redTeam.bans[i];
+                const oldBan = lastState.redTeam.bans[i];
+                if (newBan.championId > 0 && (!oldBan || oldBan.championId !== newBan.championId)) {
+                    showChampionShowcase(newBan.championName, newBan.championImg, 'ban', 'red');
+                    break;
+                }
+            }
+
+            // Check blue picks
+            for (let i = 0; i < newData.blueTeam.picks.length; i++) {
+                const newPick = newData.blueTeam.picks[i];
+                const oldPick = lastState.blueTeam.picks[i];
+                if (newPick.status === 'locked' && oldPick.status !== 'locked' && newPick.championId > 0) {
+                    showChampionShowcase(newPick.championName, newPick.championImg, 'pick', 'blue');
+                    break;
+                }
+            }
+
+            // Check red picks
+            for (let i = 0; i < newData.redTeam.picks.length; i++) {
+                const newPick = newData.redTeam.picks[i];
+                const oldPick = lastState.redTeam.picks[i];
+                if (newPick.status === 'locked' && oldPick.status !== 'locked' && newPick.championId > 0) {
+                    showChampionShowcase(newPick.championName, newPick.championImg, 'pick', 'red');
+                    break;
+                }
+            }
+
+            lastState = JSON.parse(JSON.stringify(newData));
         }
 
         function renderBans(bans, containerId) {
@@ -572,6 +817,8 @@
                 startTimer(data.timer);
             }
 
+            detectChanges(data);
+
             renderBans(data.blueTeam.bans, 'blue-bans');
             renderBans(data.redTeam.bans, 'red-bans');
             renderPicks(data.blueTeam.picks, 'blue-picks', 'blue');
@@ -582,10 +829,12 @@
             waiting.style.display = 'block';
             app.style.display = 'none';
             waiting.innerText = 'Conexión Perdida';
+            lastState = null;
         });
 
         socket.on('connect', () => {
             waiting.innerText = 'Esperando Draft';
+            lastState = null;
         });
     </script>
 
