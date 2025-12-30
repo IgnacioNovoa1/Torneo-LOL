@@ -1,6 +1,39 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-const matchSchema = new mongoose.Schema({
+interface IMatch {
+    teamA: string;
+    teamB: string;
+    winner: string | null;
+    scoreA: number;
+    scoreB: number;
+    played: boolean;
+}
+
+interface IStanding {
+    team: string;
+    wins: number;
+    losses: number;
+}
+
+export interface ITournament extends Document {
+    season: string;
+    status: 'inscripciones' | 'grupos' | 'eliminatorias' | 'finalizado';
+    groups: {
+        A: string[];
+        B: string[];
+    };
+    groupStandings: {
+        A: IStanding[];
+        B: IStanding[];
+    };
+    playoffs: {
+        semifinals: IMatch[];
+        final: IMatch;
+        thirdPlace: IMatch;
+    };
+}
+
+const matchSchema = new Schema({
     teamA: { type: String, required: true },
     teamB: { type: String, required: true },
     winner: { type: String, default: null },
@@ -9,7 +42,13 @@ const matchSchema = new mongoose.Schema({
     played: { type: Boolean, default: false }
 });
 
-const tournamentSchema = new mongoose.Schema({
+const standingSchema = new Schema({
+    team: { type: String, required: true },
+    wins: { type: Number, default: 0 },
+    losses: { type: Number, default: 0 }
+});
+
+const tournamentSchema = new Schema({
     season: { type: String, required: true, unique: true },
     status: { type: String, enum: ['inscripciones', 'grupos', 'eliminatorias', 'finalizado'], default: 'inscripciones' },
     groups: {
@@ -17,16 +56,8 @@ const tournamentSchema = new mongoose.Schema({
         B: [{ type: String }]
     },
     groupStandings: {
-        A: [{
-            team: String,
-            wins: { type: Number, default: 0 },
-            losses: { type: Number, default: 0 }
-        }],
-        B: [{
-            team: String,
-            wins: { type: Number, default: 0 },
-            losses: { type: Number, default: 0 }
-        }]
+        A: [standingSchema],
+        B: [standingSchema]
     },
     playoffs: {
         semifinals: [matchSchema],
@@ -35,4 +66,4 @@ const tournamentSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-export const Tournament = mongoose.model('Tournament', tournamentSchema);
+export const Tournament = mongoose.model<ITournament>('Tournament', tournamentSchema);
