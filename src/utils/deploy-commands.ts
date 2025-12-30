@@ -1,13 +1,14 @@
 import { REST, Routes } from 'discord.js';
 import dotenv from 'dotenv';
-import * as inscribirCommand from './commands/inscribir';
-import * as askCommand from './commands/ask';
-import * as generarGruposCommand from './commands/generarGrupos';
-import * as verGruposCommand from './commands/verGrupos';
-import * as registrarResultadoCommand from './commands/registrarResultado';
-import * as generarPlayoffsCommand from './commands/generarPlayoffs';
-import * as avanzarEquipoCommand from './commands/avanzarEquipo';
-import * as verLlaveCommand from './commands/verLlave';
+import * as inscribirCommand from '../commands/inscribir';
+import * as askCommand from '../commands/ask';
+import * as generarGruposCommand from '../commands/generarGrupos';
+import * as verGruposCommand from '../commands/verGrupos';
+import * as registrarResultadoCommand from '../commands/registrarResultado';
+import * as generarPlayoffsCommand from '../commands/generarPlayoffs';
+import * as avanzarEquipoCommand from '../commands/avanzarEquipo';
+import * as verLlaveCommand from '../commands/verLlave';
+import * as resetTorneo from '../commands/resetTorneo';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ const commands = [
     generarPlayoffsCommand.data.toJSON(),
     avanzarEquipoCommand.data.toJSON(),
     verLlaveCommand.data.toJSON(),
+    resetTorneo.data.toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
