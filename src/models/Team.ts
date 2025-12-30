@@ -2,10 +2,10 @@ import { Schema, model, Document } from 'mongoose';
 
 export interface ITeam extends Document {
     name: string;
-    captainId: string;     
-    captainName: string;   
-    roleId: string;        
-    categoryId: string;    
+    captainId: string;
+    captainName: string;
+    roleId: string;
+    categoryId: string;
     createdAt: Date;
     stats: {
         wins: number;
@@ -15,7 +15,7 @@ export interface ITeam extends Document {
 }
 
 const teamSchema = new Schema<ITeam>({
-    name: { type: String, required: true, unique: true }, 
+    name: { type: String, required: true, unique: true },
     captainId: { type: String, required: true },
     captainName: { type: String, required: true },
     roleId: { type: String, required: true },
