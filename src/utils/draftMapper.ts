@@ -30,8 +30,12 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
     if (!lcu?.actions) return state;
 
-    const active = new Map<number, any>();
+    // Obtener cellIds de cada equipo
+    const blueTeamCellIds = (lcu.myTeam || []).map((p: any) => p.cellId);
+    const redTeamCellIds = (lcu.theirTeam || []).map((p: any) => p.cellId);
 
+    // Mapa de picks activos
+    const active = new Map<number, any>();
     lcu.actions.flat().forEach((a: any) => {
         if (a.type === 'pick') {
             active.set(a.actorCellId, a);
@@ -42,9 +46,7 @@ export function mapLcuToDraft(lcu: any): DraftState {
         team.map(player => {
             const act = active.get(player.cellId);
             const champId = act ? act.championId : player.championId;
-
             let status: DraftPick['status'] = 'none';
-
             if (act) status = act.completed ? 'locked' : 'picking';
             else if (champId > 0) status = 'locked';
 
@@ -56,41 +58,48 @@ export function mapLcuToDraft(lcu: any): DraftState {
                 status
             };
         });
-const buildBans = (team: any[], isBlue: boolean): DraftPick[] => {
-    const bans: DraftPick[] = [];
 
-    const teamCellIds = team.map(p => p.cellId);
+    // CORRECCIÓN: Construir bans desde todas las acciones de tipo 'ban'
+    const buildBans = (teamCellIds: number[]): DraftPick[] => {
+        const bans: DraftPick[] = [];
 
-    const banActions = lcu.actions
-        .flat()
-        .filter((a: any) =>
-            a.type === 'ban' &&
-            teamCellIds.includes(a.actorCellId)
-        );
+        // Obtener TODAS las acciones de ban del equipo
+        const banActions = lcu.actions
+            .flat()
+            .filter((a: any) =>
+                a.type === 'ban' &&
+                teamCellIds.includes(a.actorCellId)
+            )
+            .sort((a: any, b: any) => a.id - b.id); // Ordenar por ID de acción
 
-    for (let i = 0; i < 5; i++) {
-        const action = banActions[i];
-        const champId = action?.championId > 0 && action.completed
-            ? action.championId
-            : 0;
+        console.log(`Bans encontrados para equipo:`, banActions);
 
-        bans.push({
-            cellId: 0,
-            championId: champId,
-            championName: champId ? riotService.getChampName(champId) : '',
-            championImg: champId ? riotService.getChampImage(champId) : '',
-            status: champId ? 'locked' : 'none'
-        });
-    }
+        // Crear slots para 5 bans
+        for (let i = 0; i < 5; i++) {
+            const action = banActions[i];
+            const champId = action?.championId > 0 ? action.championId : 0;
 
-    return bans;
-};
+            bans.push({
+                cellId: action?.actorCellId || 0,
+                championId: champId,
+                championName: champId ? riotService.getChampName(champId) : '',
+                championImg: champId ? riotService.getChampImage(champId) : '',
+                status: champId ? 'locked' : 'none'
+            });
+        }
 
+        return bans;
+    };
 
+    // Construir picks y bans
     state.blueTeam.picks = buildPicks(lcu.myTeam || []);
     state.redTeam.picks = buildPicks(lcu.theirTeam || []);
-    state.blueTeam.bans = buildBans(lcu.bans?.myTeamBans || [], true);
-    state.redTeam.bans = buildBans(lcu.bans?.theirTeamBans || [], false);
+    state.blueTeam.bans = buildBans(blueTeamCellIds);
+    state.redTeam.bans = buildBans(redTeamCellIds);
+
+    // Debug
+    console.log('BLUE BANS:', state.blueTeam.bans);
+    console.log('RED BANS:', state.redTeam.bans);
 
     return state;
 }
