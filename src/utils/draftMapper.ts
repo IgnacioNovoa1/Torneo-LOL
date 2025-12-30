@@ -35,36 +35,42 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
     const active = new Map<number, any>();
     lcu.actions.flat().forEach((a: any) => {
-        if (a.type === 'pick') {
+        if (a.type === 'pick' && !a.completed) {
             active.set(a.actorCellId, a);
         }
     });
 
-    const buildPicks = (team: any[]): DraftPick[] =>
-        team.map(player => {
+    const buildPicks = (team: any[]): DraftPick[] => {
+        const picks: DraftPick[] = [];
+
+        for (let i = 0; i < 5; i++) {
+            const player = team[i] || { cellId: i, championId: 0, championPickIntent: 0 };
             const act = active.get(player.cellId);
             let champId = 0;
             let status: DraftPick['status'] = 'none';
 
-            if (act) {
-                champId = act.championId > 0 ? act.championId : 0;
-                status = act.completed ? 'locked' : (champId > 0 ? 'picking' : 'none');
-            } else if (player.championId > 0) {
+            if (player.championId > 0) {
                 champId = player.championId;
                 status = 'locked';
+            } else if (act && act.championId > 0) {
+                champId = act.championId;
+                status = 'picking';
             } else if (player.championPickIntent > 0) {
                 champId = player.championPickIntent;
                 status = 'picking';
             }
 
-            return {
+            picks.push({
                 cellId: player.cellId,
                 championId: champId,
                 championName: champId > 0 ? riotService.getChampName(champId) : '',
                 championImg: champId > 0 ? riotService.getChampImage(champId) : '',
                 status
-            };
-        });
+            });
+        }
+
+        return picks;
+    };
 
     const buildBans = (teamCellIds: number[]): DraftPick[] => {
         const bans: DraftPick[] = [];
@@ -75,8 +81,6 @@ export function mapLcuToDraft(lcu: any): DraftState {
                 teamCellIds.includes(a.actorCellId)
             )
             .sort((a: any, b: any) => a.id - b.id);
-
-        console.log('Bans encontrados para equipo:', banActions);
 
         for (let i = 0; i < 5; i++) {
             const action = banActions[i];
@@ -96,9 +100,6 @@ export function mapLcuToDraft(lcu: any): DraftState {
     state.redTeam.picks = buildPicks(lcu.theirTeam || []);
     state.blueTeam.bans = buildBans(blueTeamCellIds);
     state.redTeam.bans = buildBans(redTeamCellIds);
-
-    console.log('BLUE BANS:', state.blueTeam.bans);
-    console.log('RED BANS:', state.redTeam.bans);
 
     return state;
 }
