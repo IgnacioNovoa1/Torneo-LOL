@@ -34,8 +34,13 @@ export function mapLcuToDraft(lcu: any): DraftState {
     const redTeamCellIds = (lcu.theirTeam || []).map((p: any) => p.cellId);
 
     const active = new Map<number, any>();
+
     lcu.actions.flat().forEach((a: any) => {
         if (a.type === 'pick' && !a.completed) {
+            const current = active.get(a.actorCellId);
+            if (current && current.isInProgress && !a.isInProgress) {
+                return;
+            }
             active.set(a.actorCellId, a);
         }
     });
@@ -44,8 +49,9 @@ export function mapLcuToDraft(lcu: any): DraftState {
         const picks: DraftPick[] = [];
 
         for (let i = 0; i < 5; i++) {
-            const player = team[i] || { cellId: i, championId: 0, championPickIntent: 0 };
+            const player = team[i] || { cellId: -1, championId: 0, championPickIntent: 0 };
             const act = active.get(player.cellId);
+
             let champId = 0;
             let status: DraftPick['status'] = 'none';
 
@@ -74,17 +80,19 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
     const buildBans = (teamCellIds: number[]): DraftPick[] => {
         const bans: DraftPick[] = [];
+
         const banActions = lcu.actions
             .flat()
             .filter((a: any) =>
                 a.type === 'ban' &&
-                teamCellIds.includes(a.actorCellId)
-            )
-            .sort((a: any, b: any) => a.id - b.id);
+                teamCellIds.includes(a.actorCellId) &&
+                (a.completed || a.isInProgress)
+            );
 
         for (let i = 0; i < 5; i++) {
             const action = banActions[i];
-            const champId = action?.championId > 0 && action?.completed ? action.championId : 0;
+            const champId = (action?.championId > 0 && action?.completed) ? action.championId : 0;
+
             bans.push({
                 cellId: action?.actorCellId || 0,
                 championId: champId,
