@@ -32,6 +32,7 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
     const blueTeamCellIds = (lcu.myTeam || []).map((p: any) => p.cellId);
     const redTeamCellIds = (lcu.theirTeam || []).map((p: any) => p.cellId);
+
     const active = new Map<number, any>();
     lcu.actions.flat().forEach((a: any) => {
         if (a.type === 'pick') {
@@ -42,14 +43,21 @@ export function mapLcuToDraft(lcu: any): DraftState {
     const buildPicks = (team: any[]): DraftPick[] =>
         team.map(player => {
             const act = active.get(player.cellId);
-            const champId = act ? act.championId : player.championId;
+
+            let champId = 0;
             let status: DraftPick['status'] = 'none';
-            if (act) status = act.completed ? 'locked' : 'picking';
-            else if (champId > 0) status = 'locked';
+
+            if (act) {
+                champId = act.championId > 0 ? act.championId : 0;
+                status = act.completed ? 'locked' : (champId > 0 ? 'picking' : 'none');
+            } else if (player.championId > 0) {
+                champId = player.championId;
+                status = 'locked';
+            }
 
             return {
                 cellId: player.cellId,
-                championId: champId > 0 ? champId : 0,
+                championId: champId,
                 championName: champId > 0 ? riotService.getChampName(champId) : '',
                 championImg: champId > 0 ? riotService.getChampImage(champId) : '',
                 status
@@ -58,6 +66,7 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
     const buildBans = (teamCellIds: number[]): DraftPick[] => {
         const bans: DraftPick[] = [];
+
         const banActions = lcu.actions
             .flat()
             .filter((a: any) =>
