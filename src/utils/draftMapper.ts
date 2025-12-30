@@ -29,6 +29,7 @@ export function mapLcuToDraft(lcu: any): DraftState {
     };
 
     if (!lcu?.actions) return state;
+
     const blueTeamCellIds = (lcu.myTeam || []).map((p: any) => p.cellId);
     const redTeamCellIds = (lcu.theirTeam || []).map((p: any) => p.cellId);
     const active = new Map<number, any>();
@@ -69,7 +70,7 @@ export function mapLcuToDraft(lcu: any): DraftState {
 
         for (let i = 0; i < 5; i++) {
             const action = banActions[i];
-            const champId = action?.championId > 0 ? action.championId : 0;
+            const champId = action?.championId > 0 && action?.completed ? action.championId : 0;
 
             bans.push({
                 cellId: action?.actorCellId || 0,

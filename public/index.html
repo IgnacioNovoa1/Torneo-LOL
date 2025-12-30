@@ -404,7 +404,6 @@
             border-color: gold;
         }
 
-        /* Hexagonal decorations */
         .timer-box::before,
         .timer-box::after {
             content: '';
@@ -425,12 +424,10 @@
             right: -15px;
         }
 
-        /* Center decoration line */
         .draft-container::before {
             display: none;
         }
 
-        /* Champion Showcase Animation */
         .champion-showcase {
             position: fixed;
             top: 50%;
@@ -655,16 +652,13 @@
         function showChampionShowcase(championName, championImg, type, side) {
             const imageContainer = showcaseEl.querySelector('.showcase-image');
 
-            // Reset classes
             imageContainer.classList.remove('blue-pick', 'red-pick', 'ban');
             showcaseName.classList.remove('blue-pick', 'red-pick', 'ban');
             showcaseLabel.classList.remove('blue-pick', 'red-pick', 'ban');
 
-            // Set content
             showcaseImg.src = championImg;
             showcaseName.innerText = championName;
 
-            // Set classes based on type
             if (type === 'ban') {
                 imageContainer.classList.add('ban');
                 showcaseName.classList.add('ban');
@@ -678,12 +672,10 @@
                 showcaseLabel.innerText = side === 'blue' ? 'BLUE SIDE' : 'RED SIDE';
             }
 
-            // Trigger animation
             showcaseEl.classList.remove('show');
-            void showcaseEl.offsetWidth; // Force reflow
+            void showcaseEl.offsetWidth;
             showcaseEl.classList.add('show');
 
-            // Remove class after animation
             setTimeout(() => {
                 showcaseEl.classList.remove('show');
             }, 2500);
@@ -695,37 +687,33 @@
                 return;
             }
 
-            // Check blue bans - solo cuando están completados
             for (let i = 0; i < newData.blueTeam.bans.length; i++) {
                 const newBan = newData.blueTeam.bans[i];
                 const oldBan = lastState.blueTeam.bans[i];
-                // Solo mostrar si es un ban nuevo Y está locked
                 if (newBan.championId > 0 &&
                     newBan.status === 'locked' &&
-                    (!oldBan || oldBan.championId !== newBan.championId || oldBan.status !== 'locked')) {
+                    oldBan &&
+                    oldBan.championId === 0) {
                     showChampionShowcase(newBan.championName, newBan.championImg, 'ban', 'blue');
                     break;
                 }
             }
 
-            // Check red bans - solo cuando están completados
             for (let i = 0; i < newData.redTeam.bans.length; i++) {
                 const newBan = newData.redTeam.bans[i];
                 const oldBan = lastState.redTeam.bans[i];
-                // Solo mostrar si es un ban nuevo Y está locked
                 if (newBan.championId > 0 &&
                     newBan.status === 'locked' &&
-                    (!oldBan || oldBan.championId !== newBan.championId || oldBan.status !== 'locked')) {
+                    oldBan &&
+                    oldBan.championId === 0) {
                     showChampionShowcase(newBan.championName, newBan.championImg, 'ban', 'red');
                     break;
                 }
             }
 
-            // Check blue picks - solo cuando cambia de 'picking' a 'locked'
             for (let i = 0; i < newData.blueTeam.picks.length; i++) {
                 const newPick = newData.blueTeam.picks[i];
                 const oldPick = lastState.blueTeam.picks[i];
-                // Solo cuando se CONFIRMA el pick (pasa de picking/none a locked)
                 if (newPick.status === 'locked' &&
                     oldPick.status !== 'locked' &&
                     newPick.championId > 0) {
@@ -734,11 +722,9 @@
                 }
             }
 
-            // Check red picks - solo cuando cambia de 'picking' a 'locked'
             for (let i = 0; i < newData.redTeam.picks.length; i++) {
                 const newPick = newData.redTeam.picks[i];
                 const oldPick = lastState.redTeam.picks[i];
-                // Solo cuando se CONFIRMA el pick (pasa de picking/none a locked)
                 if (newPick.status === 'locked' &&
                     oldPick.status !== 'locked' &&
                     newPick.championId > 0) {
