@@ -793,7 +793,7 @@
                     card.classList.add(side === 'blue' ? 'locked-blue' : 'locked-red');
                 }
 
-                if (pick.championId !== 0 && pick.championImg) {
+                if (pick.championId !== 0 && pick.championImg && (pick.status === 'picking' || pick.status === 'locked')) {
                     img.src = pick.championImg;
                     name.innerText = pick.championName;
                     console.log(`Rendering pick: ${pick.championName} (${pick.championId}) - Status: ${pick.status}`);
