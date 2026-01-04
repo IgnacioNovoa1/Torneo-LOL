@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "build": "tsc && cp -r src/assets dist/",
+    "build": "tsc && npm run copy-assets",
     "dev": "ts-node src/index.ts",
     "deploy": "ts-node src/utils/deploy-commands.ts",
     "clear-commands": "ts-node src/utils/clear-commands.ts",
@@ -13,7 +13,8 @@
     "reset-db": "ts-node src/utils/reset-db-only.ts",
     "reset-menu": "ts-node src/utils/reset-menu.ts",
     "watch": "tsc --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "copy-assets": "mkdir -p dist/assets && cp -r src/assets/* dist/assets/ 2>/dev/null || true"
   },
   "engines": {
     "node": ">=18.0.0"

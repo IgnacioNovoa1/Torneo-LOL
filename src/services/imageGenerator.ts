@@ -13,48 +13,42 @@ interface PlayoffData {
     thirdPlace?: { teamA: string; teamB: string; winner: string | null; played: boolean };
 }
 
+// Paleta CocosCup
 const COLORS = {
-    primary: '#FFD700', 
-    secondary: '#00D9FF', 
-    accent: '#FF1493',  
-    darkBg: '#0A0E1A',  
-    darkBg2: '#1A0B2E', 
-    textLight: '#FFFFFF', 
-    textDim: '#CCCCCC', 
+    primary: '#FFD700',
+    cyan: '#00D9FF',
+    magenta: '#FF1493',
+    darkBg: '#0a0e1a',
+    darkBg2: '#1a0b2e',
+    cardBg: 'rgba(10, 14, 26, 0.85)',
+    textWhite: '#FFFFFF',
+    textGray: '#CCCCCC',
     success: '#00FF88',
-    border: '#1E3A5F'        
+    border: '#1E3A5F'
 };
 
 export class ImageGenerator {
 
     private getLogoBase64(): string {
         try {
-            const possiblePaths = [
+            const paths = [
                 path.join(__dirname, '../../assets/logo.png'),
                 path.join(__dirname, '../assets/logo.png'),
-                path.join(process.cwd(), 'assets/logo.png'),
                 path.join(process.cwd(), 'src/assets/logo.png'),
                 path.join(process.cwd(), 'dist/assets/logo.png')
             ];
 
-            for (const logoPath of possiblePaths) {
-                if (fs.existsSync(logoPath)) {
-                    const img = fs.readFileSync(logoPath);
-                    console.log('✅ Logo cargado desde:', logoPath);
-                    return `data:image/png;base64,${img.toString('base64')}`;
+            for (const p of paths) {
+                if (fs.existsSync(p)) {
+                    console.log('✅ Logo:', p);
+                    return `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
                 }
             }
-            
-            console.warn('Logo no encontrado en ninguna ruta. Buscado en:', possiblePaths);
+            console.warn('⚠️ Logo no encontrado');
         } catch (e) {
-            console.error('Error cargando logo:', e);
+            console.error('❌ Error logo:', e);
         }
         return '';
-    }
-
-    private truncateText(text: string, maxLength: number): string {
-        if (text.length <= maxLength) return text;
-        return text.substring(0, maxLength - 3) + '...';
     }
 
     private async svgToPng(svg: string): Promise<Buffer> {
@@ -66,220 +60,118 @@ export class ImageGenerator {
         const height = 1080;
         const logoB64 = this.getLogoBase64();
 
-        // Ordenar equipos por victorias
         const sortedA = [...data.A].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
         const sortedB = [...data.B].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
 
-        const renderGroup = (teams: any[], groupName: string, x: number, primaryColor: string, accentColor: string) => {
-            const groupWidth = 570;
-            const groupHeight = 80;
-            const rowHeight = 70;
-            const totalHeight = groupHeight + (teams.length * rowHeight) + 10;
-            
+        const renderGroup = (teams: any[], groupName: string, x: number, color: string) => {
+            const w = 550;
+            const headerH = 75;
+            const rowH = 65;
+            const totalH = headerH + (teams.length * rowH) + 15;
+
             return `
-            <g transform="translate(${x}, 380)">
+            <g transform="translate(${x}, 400)">
                 <defs>
-                    <linearGradient id="groupGrad${groupName}" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:${primaryColor};stop-opacity:0.25" />
-                        <stop offset="100%" style="stop-color:${primaryColor};stop-opacity:0.05" />
+                    <linearGradient id="grad${groupName}" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:${color};stop-opacity:0.2"/>
+                        <stop offset="100%" style="stop-color:${color};stop-opacity:0.05"/>
                     </linearGradient>
-                    <filter id="glow${groupName}">
-                        <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
                 </defs>
                 
-                <!-- Marco del grupo -->
-                <rect x="0" y="0" width="${groupWidth}" height="${totalHeight}" 
-                    fill="url(#groupGrad${groupName})" 
-                    stroke="${accentColor}" 
-                    stroke-width="3" 
-                    rx="12" 
-                    filter="url(#glow${groupName})" />
+                <rect x="0" y="0" width="${w}" height="${totalH}" 
+                    fill="url(#grad${groupName})" stroke="${color}" stroke-width="3" rx="10"/>
                 
-                <!-- Header del grupo -->
-                <rect x="0" y="0" width="${groupWidth}" height="${groupHeight}" 
-                    fill="${accentColor}" 
-                    fill-opacity="0.95" 
-                    rx="12" />
+                <rect x="0" y="0" width="${w}" height="${headerH}" fill="${color}" rx="10"/>
                 
-                <!-- Título del grupo -->
-                <text x="${groupWidth/2}" y="52" 
-                    fill="${COLORS.textLight}" 
-                    font-size="42" 
-                    font-weight="900" 
-                    font-family="Arial, sans-serif" 
-                    text-anchor="middle" 
-                    letter-spacing="6">
+                <text x="${w / 2}" y="48" fill="#000" font-size="38" font-weight="900" 
+                    font-family="Arial" text-anchor="middle" letter-spacing="5">
                     GROUP ${groupName}
                 </text>
                 
-                <!-- Headers de columnas -->
-                <text x="70" y="${groupHeight + 35}" 
-                    fill="${accentColor}" 
-                    font-size="18" 
-                    font-weight="bold" 
-                    font-family="Arial, sans-serif">
-                    EQUIPO
-                </text>
-                <text x="${groupWidth - 40}" y="${groupHeight + 35}" 
-                    fill="${accentColor}" 
-                    font-size="18" 
-                    font-weight="bold" 
-                    font-family="Arial, sans-serif" 
-                    text-anchor="end">
-                    W - L
-                </text>
+                <text x="60" y="${headerH + 32}" fill="${color}" font-size="16" 
+                    font-weight="bold" font-family="Arial">EQUIPO</text>
+                <text x="${w - 35}" y="${headerH + 32}" fill="${color}" font-size="16" 
+                    font-weight="bold" font-family="Arial" text-anchor="end">W - L</text>
                 
-                <!-- Equipos -->
-                ${teams.map((team, i) => {
-                    const y = groupHeight + 55 + (i * rowHeight);
-                    const isQualified = i < 2;
-                    const bgOpacity = i % 2 === 0 ? '0.08' : '0.03';
-                    const teamName = this.truncateText(team.team.toUpperCase(), 20);
-                    
-                    return `
+                ${teams.map((t, i) => {
+                const y = headerH + 50 + (i * rowH);
+                const qualified = i < 2;
+                const maxLen = 18;
+                let name = t.team.toUpperCase();
+                if (name.length > maxLen) {
+                    name = name.substring(0, maxLen - 2) + '..';
+                }
+
+                return `
                     <g>
-                        <!-- Fila alternada -->
-                        <rect x="8" y="${y - 18}" width="${groupWidth - 16}" height="${rowHeight - 15}" 
-                            fill="${COLORS.textLight}" 
-                            fill-opacity="${bgOpacity}" 
-                            rx="6" />
+                        <rect x="6" y="${y - 16}" width="${w - 12}" height="${rowH - 12}" 
+                            fill="#fff" fill-opacity="${i % 2 === 0 ? '0.06' : '0.02'}" rx="5"/>
                         
-                        <!-- Indicador de clasificación -->
-                        ${isQualified ? `
-                        <rect x="13" y="${y - 13}" width="6" height="${rowHeight - 25}" 
-                            fill="${COLORS.success}" 
-                            rx="3" />
-                        <circle cx="33" cy="${y + 8}" r="5" fill="${COLORS.success}" />
+                        ${qualified ? `
+                        <rect x="11" y="${y - 11}" width="5" height="${rowH - 22}" fill="${COLORS.success}" rx="2"/>
+                        <circle cx="28" cy="${y + 6}" r="4" fill="${COLORS.success}"/>
                         ` : ''}
                         
-                        <!-- Posición -->
-                        <text x="${isQualified ? '58' : '38'}" y="${y + 13}" 
-                            fill="${isQualified ? COLORS.success : '#888888'}" 
-                            font-size="28" 
-                            font-weight="bold" 
-                            font-family="Arial, sans-serif">
-                            ${i + 1}
-                        </text>
+                        <text x="${qualified ? '48' : '28'}" y="${y + 11}" 
+                            fill="${qualified ? COLORS.success : '#888'}" 
+                            font-size="26" font-weight="bold" font-family="Arial">${i + 1}</text>
                         
-                        <!-- Nombre del equipo (con límite de caracteres) -->
-                        <text x="${isQualified ? '100' : '80'}" y="${y + 13}" 
-                            fill="${isQualified ? COLORS.textLight : COLORS.textDim}" 
-                            font-size="24" 
-                            font-weight="${isQualified ? 'bold' : '600'}" 
-                            font-family="Arial, sans-serif">
-                            ${teamName}
-                        </text>
+                        <text x="${qualified ? '85' : '65'}" y="${y + 11}" 
+                            fill="${qualified ? COLORS.textWhite : COLORS.textGray}" 
+                            font-size="22" font-weight="${qualified ? 'bold' : '600'}" 
+                            font-family="Arial">${name}</text>
                         
-                        <!-- Record -->
-                        <text x="${groupWidth - 40}" y="${y + 13}" 
-                            fill="${isQualified ? accentColor : '#999999'}" 
-                            font-size="28" 
-                            font-weight="bold" 
-                            font-family="Arial, monospace" 
-                            text-anchor="end">
-                            ${team.wins} - ${team.losses}
-                        </text>
-                    </g>
-                    `;
-                }).join('')}
-            </g>
-            `;
+                        <text x="${w - 35}" y="${y + 11}" fill="${qualified ? color : '#999'}" 
+                            font-size="26" font-weight="bold" font-family="monospace" 
+                            text-anchor="end">${t.wins} - ${t.losses}</text>
+                    </g>`;
+            }).join('')}
+            </g>`;
         };
 
         const svg = `
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
             <defs>
-                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:${COLORS.darkBg};stop-opacity:1" />
-                    <stop offset="50%" style="stop-color:#0F2847;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:${COLORS.darkBg2};stop-opacity:1" />
+                <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:${COLORS.darkBg}"/>
+                    <stop offset="50%" style="stop-color:#0f2847"/>
+                    <stop offset="100%" style="stop-color:${COLORS.darkBg2}"/>
                 </linearGradient>
-                
-                <pattern id="hexPattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                    <path d="M 50 0 L 100 25 L 100 75 L 50 100 L 0 75 L 0 25 Z" 
-                        fill="none" 
-                        stroke="${COLORS.border}" 
-                        stroke-width="0.5" 
-                        opacity="0.3"/>
+                <pattern id="hex" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+                    <path d="M40 0 L80 20 80 60 40 80 0 60 0 20 Z" fill="none" 
+                        stroke="${COLORS.border}" stroke-width="0.5" opacity="0.25"/>
                 </pattern>
-                
-                <linearGradient id="topGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:${COLORS.secondary};stop-opacity:0.25" />
-                    <stop offset="100%" style="stop-color:${COLORS.secondary};stop-opacity:0" />
-                </linearGradient>
             </defs>
             
-            <rect width="100%" height="100%" fill="url(#bgGradient)" />
-            <rect width="100%" height="100%" fill="url(#hexPattern)" />
-            <rect x="0" y="0" width="${width}" height="300" fill="url(#topGlow)" />
+            <rect width="100%" height="100%" fill="url(#bg)"/>
+            <rect width="100%" height="100%" fill="url(#hex)"/>
             
-            <line x1="0" y1="280" x2="${width}" y2="280" stroke="${COLORS.secondary}" stroke-width="2" opacity="0.4"/>
-            
-            <!-- Logo del torneo -->
             ${logoB64 ? `
-            <g transform="translate(${width/2}, 100)">
-                <circle cx="0" cy="0" r="85" fill="${COLORS.darkBg}" opacity="0.9"/>
-                <circle cx="0" cy="0" r="85" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
-                <image href="${logoB64}" x="-70" y="-70" height="140" width="140" />
-            </g>
-            ` : `
-            <!-- Placeholder si no hay logo -->
-            <g transform="translate(${width/2}, 100)">
-                <circle cx="0" cy="0" r="85" fill="${COLORS.darkBg}" opacity="0.9"/>
-                <circle cx="0" cy="0" r="85" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
-                <text x="0" y="15" fill="${COLORS.primary}" font-size="48" font-weight="bold" 
-                    font-family="Arial" text-anchor="middle">CC</text>
-            </g>
+            <g transform="translate(${width / 2}, 110)">
+                <circle cx="0" cy="0" r="80" fill="${COLORS.darkBg}" opacity="0.9"/>
+                <circle cx="0" cy="0" r="80" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
+                <image href="${logoB64}" x="-65" y="-65" width="130" height="130"/>
+            </g>` : `
+            <circle cx="${width / 2}" cy="110" r="80" fill="${COLORS.darkBg}" opacity="0.9"/>
+            <circle cx="${width / 2}" cy="110" r="80" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
+            <text x="${width / 2}" y="125" fill="${COLORS.primary}" font-size="42" 
+                font-weight="bold" font-family="Arial" text-anchor="middle">CC</text>
             `}
             
-            <!-- Título principal -->
-            <text x="${width/2}" y="250" 
-                fill="${COLORS.textLight}" 
-                font-size="68" 
-                font-weight="900" 
-                font-family="Arial, sans-serif" 
-                text-anchor="middle" 
-                letter-spacing="8">
-                FASE DE GRUPOS
-            </text>
+            <text x="${width / 2}" y="260" fill="${COLORS.textWhite}" font-size="64" 
+                font-weight="900" font-family="Arial" text-anchor="middle" 
+                letter-spacing="7">FASE DE GRUPOS</text>
             
-            <text x="${width/2}" y="310" 
-                fill="${COLORS.secondary}" 
-                font-size="26" 
-                font-weight="600" 
-                font-family="Arial, sans-serif" 
-                text-anchor="middle" 
-                letter-spacing="3">
-                COCOSCUP 2026 • CLASIFICACIÓN OFICIAL
-            </text>
+            <text x="${width / 2}" y="315" fill="${COLORS.cyan}" font-size="24" 
+                font-weight="600" font-family="Arial" text-anchor="middle" 
+                letter-spacing="2">COCOSCUP 2026 • CLASIFICACIÓN OFICIAL</text>
             
-            <!-- Grupo A (Cyan) -->
-            ${renderGroup(sortedA, 'A', 200, COLORS.secondary, COLORS.secondary)}
+            ${renderGroup(sortedA, 'A', 220, COLORS.cyan)}
+            ${renderGroup(sortedB, 'B', 1150, COLORS.magenta)}
             
-            <!-- Grupo B (Rosa/Magenta) -->
-            ${renderGroup(sortedB, 'B', 1150, COLORS.accent, COLORS.accent)}
-            
-            <!-- Nota de clasificación -->
-            <g transform="translate(${width/2}, 980)">
-                <circle cx="-330" cy="0" r="7" fill="${COLORS.success}" />
-                <text x="-310" y="6" 
-                    fill="${COLORS.textDim}" 
-                    font-size="20" 
-                    font-weight="500" 
-                    font-family="Arial, sans-serif">
-                    LOS 2 MEJORES EQUIPOS DE CADA GRUPO CLASIFICAN A SEMIFINALES
-                </text>
-            </g>
-            
-            <line x1="200" y1="1040" x2="${width - 200}" y2="1040" 
-                stroke="${COLORS.secondary}" 
-                stroke-width="1" 
-                opacity="0.3"/>
+            <circle cx="${width / 2 - 300}" cy="990" r="6" fill="${COLORS.success}"/>
+            <text x="${width / 2 - 280}" y="996" fill="${COLORS.textGray}" font-size="19" 
+                font-family="Arial">LOS 2 MEJORES EQUIPOS DE CADA GRUPO CLASIFICAN A SEMIFINALES</text>
         </svg>`;
 
         return await this.svgToPng(svg);
@@ -291,219 +183,135 @@ export class ImageGenerator {
         const logoB64 = this.getLogoBase64();
 
         const drawMatch = (x: number, y: number, teamA: string, teamB: string, winner: string | null, label: string, isFinal: boolean = false) => {
-            const w = isFinal ? 380 : 320;
-            const h = 130;
-            const color = isFinal ? COLORS.primary : COLORS.secondary;
-            
-            const isWinnerA = winner === teamA;
-            const isWinnerB = winner === teamB;
-            
-            // Truncar nombres largos
-            const displayTeamA = this.truncateText(teamA === 'TBD' ? '???' : teamA.toUpperCase(), 15);
-            const displayTeamB = this.truncateText(teamB === 'TBD' ? '???' : teamB.toUpperCase(), 15);
-            
+            const w = isFinal ? 480 : 380;
+            const h = 160;
+            const color = isFinal ? COLORS.primary : COLORS.cyan;
+
+            const winA = winner === teamA;
+            const winB = winner === teamB;
+
+            const maxLen = isFinal ? 16 : 14;
+            let nameA = teamA === 'TBD' ? '???' : teamA.toUpperCase();
+            let nameB = teamB === 'TBD' ? '???' : teamB.toUpperCase();
+            if (nameA.length > maxLen) nameA = nameA.substring(0, maxLen - 2) + '..';
+            if (nameB.length > maxLen) nameB = nameB.substring(0, maxLen - 2) + '..';
+
             return `
             <g transform="translate(${x}, ${y})">
                 <defs>
-                    <linearGradient id="matchGrad${x}${y}" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:${color};stop-opacity:0.15" />
-                        <stop offset="100%" style="stop-color:${color};stop-opacity:0.05" />
+                    <linearGradient id="m${x}${y}" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:${color};stop-opacity:0.15"/>
+                        <stop offset="100%" style="stop-color:${color};stop-opacity:0.05"/>
                     </linearGradient>
                     ${isFinal ? `
-                    <filter id="finalGlow${x}${y}">
-                        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                    ` : ''}
+                    <filter id="fg${x}${y}">
+                        <feGaussianBlur stdDeviation="4"/>
+                        <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>` : ''}
                 </defs>
                 
-                <!-- Box principal -->
-                <rect x="0" y="0" width="${w}" height="${h}" 
-                    fill="url(#matchGrad${x}${y})" 
-                    stroke="${color}" 
-                    stroke-width="${isFinal ? '4' : '3'}" 
-                    rx="10" 
-                    ${isFinal ? `filter="url(#finalGlow${x}${y})"` : ''}/>
+                <rect x="0" y="0" width="${w}" height="${h}" fill="url(#m${x}${y})" 
+                    stroke="${color}" stroke-width="${isFinal ? 5 : 3}" rx="12" 
+                    ${isFinal ? `filter="url(#fg${x}${y})"` : ''}/>
                 
-                <!-- Label del match -->
-                <rect x="0" y="0" width="${w}" height="32" 
-                    fill="${color}" 
-                    fill-opacity="0.95" 
-                    rx="10" />
-                <text x="${w/2}" y="22" 
-                    fill="${isFinal ? '#000000' : '#000000'}" 
-                    font-size="${isFinal ? '17' : '16'}" 
-                    font-weight="bold" 
-                    font-family="Arial, sans-serif" 
-                    text-anchor="middle" 
-                    letter-spacing="2">
-                    ${label}
-                </text>
+                <rect x="0" y="0" width="${w}" height="38" fill="${color}" rx="12"/>
+                <text x="${w / 2}" y="26" fill="#000" font-size="${isFinal ? 19 : 17}" 
+                    font-weight="bold" font-family="Arial" text-anchor="middle" 
+                    letter-spacing="2">${label}</text>
                 
-                <!-- Team A -->
-                <g>
-                    <rect x="4" y="36" width="${w-8}" height="42" 
-                        fill="${isWinnerA ? color : COLORS.textLight}" 
-                        fill-opacity="${isWinnerA ? '0.2' : '0.03'}" 
-                        rx="6" />
-                    ${isWinnerA ? `
-                    <rect x="9" y="41" width="5" height="32" 
-                        fill="${COLORS.success}" 
-                        rx="2.5" />
-                    ` : ''}
-                    <text x="${isWinnerA ? '28' : '18'}" y="63" 
-                        fill="${isWinnerA ? COLORS.textLight : COLORS.textDim}" 
-                        font-size="${isFinal ? '22' : '20'}" 
-                        font-weight="${isWinnerA ? 'bold' : '600'}" 
-                        font-family="Arial, sans-serif">
-                        ${displayTeamA}
-                    </text>
-                    ${isWinnerA ? `
-                    <text x="${w - 20}" y="63" 
-                        font-size="20" 
-                        text-anchor="end">
-                        👑
-                    </text>
-                    ` : ''}
-                </g>
+                <rect x="6" y="42" width="${w - 12}" height="52" 
+                    fill="${winA ? color : '#fff'}" fill-opacity="${winA ? '0.18' : '0.03'}" rx="8"/>
+                ${winA ? `<rect x="11" y="47" width="6" height="42" fill="${COLORS.success}" rx="3"/>` : ''}
+                <text x="${winA ? '32' : '20'}" y="74" fill="${winA ? COLORS.textWhite : COLORS.textGray}" 
+                    font-size="${isFinal ? 25 : 23}" font-weight="${winA ? 'bold' : '600'}" 
+                    font-family="Arial">${nameA}</text>
+                ${winA ? `<text x="${w - 24}" y="74" font-size="22">👑</text>` : ''}
                 
-                <!-- Separador VS -->
-                <line x1="18" y1="85" x2="${w-18}" y2="85" 
-                    stroke="${color}" 
-                    stroke-width="2" 
-                    opacity="0.3"/>
-                <circle cx="${w/2}" cy="85" r="16" 
-                        fill="${COLORS.darkBg}" 
-                        stroke="${color}" 
-                        stroke-width="2"/>
-                <text x="${w/2}" y="91" 
-                    fill="${color}" 
-                    font-size="13" 
-                    font-weight="bold" 
-                    font-family="Arial, sans-serif" 
-                    text-anchor="middle">
-                    VS
-                </text>
+                <line x1="20" y1="102" x2="${w - 20}" y2="102" stroke="${color}" 
+                    stroke-width="2" opacity="0.3"/>
+                <circle cx="${w / 2}" cy="102" r="18" fill="${COLORS.darkBg}" 
+                        stroke="${color}" stroke-width="2"/>
+                <text x="${w / 2}" y="109" fill="${color}" font-size="14" font-weight="bold" 
+                    font-family="Arial" text-anchor="middle">VS</text>
                 
-                <!-- Team B -->
-                <g>
-                    <rect x="4" y="88" width="${w-8}" height="42" 
-                        fill="${isWinnerB ? color : COLORS.textLight}" 
-                        fill-opacity="${isWinnerB ? '0.2' : '0.03'}" 
-                        rx="6" />
-                    ${isWinnerB ? `
-                    <rect x="9" y="93" width="5" height="32" 
-                        fill="${COLORS.success}" 
-                        rx="2.5" />
-                    ` : ''}
-                    <text x="${isWinnerB ? '28' : '18'}" y="115" 
-                        fill="${isWinnerB ? COLORS.textLight : COLORS.textDim}" 
-                        font-size="${isFinal ? '22' : '20'}" 
-                        font-weight="${isWinnerB ? 'bold' : '600'}" 
-                        font-family="Arial, sans-serif">
-                        ${displayTeamB}
-                    </text>
-                    ${isWinnerB ? `
-                    <text x="${w - 20}" y="115" 
-                        font-size="20" 
-                        text-anchor="end">
-                        👑
-                    </text>
-                    ` : ''}
-                </g>
-            </g>
-            `;
+                <rect x="6" y="106" width="${w - 12}" height="52" 
+                    fill="${winB ? color : '#fff'}" fill-opacity="${winB ? '0.18' : '0.03'}" rx="8"/>
+                ${winB ? `<rect x="11" y="111" width="6" height="42" fill="${COLORS.success}" rx="3"/>` : ''}
+                <text x="${winB ? '32' : '20'}" y="138" fill="${winB ? COLORS.textWhite : COLORS.textGray}" 
+                    font-size="${isFinal ? 25 : 23}" font-weight="${winB ? 'bold' : '600'}" 
+                    font-family="Arial">${nameB}</text>
+                ${winB ? `<text x="${w - 24}" y="138" font-size="22">👑</text>` : ''}
+            </g>`;
         };
 
         const svg = `
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
             <defs>
-                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:${COLORS.darkBg};stop-opacity:1" />
-                    <stop offset="50%" style="stop-color:${COLORS.darkBg2};stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:${COLORS.darkBg};stop-opacity:1" />
+                <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:${COLORS.darkBg}"/>
+                    <stop offset="50%" style="stop-color:${COLORS.darkBg2}"/>
+                    <stop offset="100%" style="stop-color:${COLORS.darkBg}"/>
                 </linearGradient>
-                
                 <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="${COLORS.border}" stroke-width="0.5" opacity="0.2"/>
+                    <path d="M50 0 L0 0 0 50" fill="none" stroke="${COLORS.border}" 
+                        stroke-width="0.5" opacity="0.2"/>
                 </pattern>
-                
-                <radialGradient id="centerGlow" cx="50%" cy="50%">
-                    <stop offset="0%" style="stop-color:${COLORS.primary};stop-opacity:0.12" />
-                    <stop offset="100%" style="stop-color:${COLORS.primary};stop-opacity:0" />
+                <radialGradient id="glow">
+                    <stop offset="0%" style="stop-color:${COLORS.primary};stop-opacity:0.1"/>
+                    <stop offset="100%" style="stop-color:${COLORS.primary};stop-opacity:0"/>
                 </radialGradient>
             </defs>
             
-            <rect width="100%" height="100%" fill="url(#bgGradient)" />
-            <rect width="100%" height="100%" fill="url(#grid)" />
-            <ellipse cx="${width/2}" cy="${height/2}" rx="600" ry="400" fill="url(#centerGlow)" />
+            <rect width="100%" height="100%" fill="url(#bg)"/>
+            <rect width="100%" height="100%" fill="url(#grid)"/>
+            <ellipse cx="${width / 2}" cy="${height / 2}" rx="650" ry="450" fill="url(#glow)"/>
             
-            <!-- Logo -->
             ${logoB64 ? `
-            <g transform="translate(160, 80)">
-                <circle cx="0" cy="0" r="60" fill="${COLORS.darkBg}" opacity="0.9"/>
-                <circle cx="0" cy="0" r="60" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
-                <image href="${logoB64}" x="-50" y="-50" height="100" width="100" />
-            </g>
-            ` : `
-            <g transform="translate(160, 80)">
-                <circle cx="0" cy="0" r="60" fill="${COLORS.darkBg}" opacity="0.9"/>
-                <circle cx="0" cy="0" r="60" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
-                <text x="0" y="15" fill="${COLORS.primary}" font-size="32" font-weight="bold" 
-                    font-family="Arial" text-anchor="middle">CC</text>
-            </g>
+            <g transform="translate(200, 90)">
+                <circle cx="0" cy="0" r="65" fill="${COLORS.darkBg}" opacity="0.9"/>
+                <circle cx="0" cy="0" r="65" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
+                <image href="${logoB64}" x="-54" y="-54" width="108" height="108"/>
+            </g>` : `
+            <circle cx="200" cy="90" r="65" fill="${COLORS.darkBg}" opacity="0.9"/>
+            <circle cx="200" cy="90" r="65" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
+            <text x="200" y="102" fill="${COLORS.primary}" font-size="34" font-weight="bold" 
+                font-family="Arial" text-anchor="middle">CC</text>
             `}
             
-            <!-- Título -->
-            <text x="960" y="100" 
-                fill="${COLORS.primary}" 
-                font-size="64" 
-                font-weight="900" 
-                font-family="Arial, sans-serif" 
-                text-anchor="middle" 
-                letter-spacing="8">
+            <text x="${width / 2}" y="100" fill="${COLORS.primary}" font-size="60" font-weight="900" 
+                font-family="Arial" text-anchor="middle" letter-spacing="7">
                 🏆 PLAYOFFS COCOSCUP
             </text>
             
-            <text x="960" y="145" 
-                fill="${COLORS.secondary}" 
-                font-size="22" 
-                font-weight="600" 
-                font-family="Arial, sans-serif" 
-                text-anchor="middle" 
-                letter-spacing="2">
+            <text x="${width / 2}" y="145" fill="${COLORS.cyan}" font-size="22" font-weight="600" 
+                font-family="Arial" text-anchor="middle" letter-spacing="2">
                 SEMIFINALES BO1 • GRAN FINAL BO3
             </text>
             
-            <!-- Conectores -->
-            <line x1="370" y1="330" x2="600" y2="330" stroke="${COLORS.secondary}" stroke-width="3" stroke-dasharray="8,4" opacity="0.5"/>
-            <line x1="370" y1="560" x2="600" y2="560" stroke="${COLORS.secondary}" stroke-width="3" stroke-dasharray="8,4" opacity="0.5"/>
-            <line x1="600" y1="330" x2="600" y2="445" stroke="${COLORS.secondary}" stroke-width="3" stroke-dasharray="8,4" opacity="0.5"/>
-            <line x1="600" y1="560" x2="600" y2="445" stroke="${COLORS.secondary}" stroke-width="3" stroke-dasharray="8,4" opacity="0.5"/>
-            <line x1="600" y1="445" x2="970" y2="445" stroke="${COLORS.primary}" stroke-width="3" stroke-dasharray="8,4" opacity="0.6"/>
+            <line x1="430" y1="355" x2="680" y2="355" stroke="${COLORS.cyan}" 
+                stroke-width="3" stroke-dasharray="10,5" opacity="0.5"/>
+            <line x1="430" y1="625" x2="680" y2="625" stroke="${COLORS.cyan}" 
+                stroke-width="3" stroke-dasharray="10,5" opacity="0.5"/>
+            <line x1="680" y1="355" x2="680" y2="490" stroke="${COLORS.cyan}" 
+                stroke-width="3" stroke-dasharray="10,5" opacity="0.5"/>
+            <line x1="680" y1="625" x2="680" y2="490" stroke="${COLORS.cyan}" 
+                stroke-width="3" stroke-dasharray="10,5" opacity="0.5"/>
+            <line x1="680" y1="490" x2="1000" y2="490" stroke="${COLORS.primary}" 
+                stroke-width="4" stroke-dasharray="10,5" opacity="0.6"/>
             
-            <!-- Semifinal 1 -->
-            ${drawMatch(50, 265, data.semifinals[0].teamA, data.semifinals[0].teamB, data.semifinals[0].winner, 'SEMIFINAL 1')}
+            ${drawMatch(50, 275, data.semifinals[0].teamA, data.semifinals[0].teamB,
+            data.semifinals[0].winner, 'SEMIFINAL 1')}
             
-            <!-- Semifinal 2 -->
-            ${drawMatch(50, 495, data.semifinals[1].teamA, data.semifinals[1].teamB, data.semifinals[1].winner, 'SEMIFINAL 2')}
+            ${drawMatch(50, 545, data.semifinals[1].teamA, data.semifinals[1].teamB,
+                data.semifinals[1].winner, 'SEMIFINAL 2')}
             
-            <!-- Gran Final -->
-            ${drawMatch(970, 380, data.final.teamA, data.final.teamB, data.final.winner, '👑 GRAN FINAL', true)}
+            ${drawMatch(1000, 410, data.final.teamA, data.final.teamB,
+                    data.final.winner, '👑 GRAN FINAL', true)}
             
-            <!-- Footer -->
-            <line x1="300" y1="920" x2="${width - 300}" y2="920" stroke="${COLORS.primary}" stroke-width="2" opacity="0.3"/>
-            <text x="${width/2}" y="965" 
-                fill="#888888" 
-                font-size="18" 
-                font-family="Arial, sans-serif" 
-                text-anchor="middle" 
-                letter-spacing="1">
-                COCOSCUP 2026 • LLAVE OFICIAL
-            </text>
+            <line x1="350" y1="940" x2="${width - 350}" y2="940" stroke="${COLORS.primary}" 
+                stroke-width="2" opacity="0.3"/>
+            <text x="${width / 2}" y="985" fill="#888" font-size="18" font-family="Arial" 
+                text-anchor="middle" letter-spacing="1">COCOSCUP 2026 • LLAVE OFICIAL</text>
         </svg>`;
 
         return await this.svgToPng(svg);
