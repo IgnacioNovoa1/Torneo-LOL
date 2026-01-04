@@ -5,7 +5,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-grupos')
-    .setDescription('[ADMIN] Genera grupos usando Gemini IA')
+    .setDescription('[ADMIN] Genera grupos instantáneamente')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -41,19 +41,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         tournament.status = 'grupos';
         await tournament.save();
 
-        await interaction.editReply('🤖 Gemini está diseñando la tabla...');
-
         const imageBuffer = await imageGenerator.generateGroupsImage({
             A: tournament.groupStandings.A,
             B: tournament.groupStandings.B
         });
 
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-ai.png'});
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos.png'});
         
         const embed = new EmbedBuilder()
             .setTitle('🏆 GRUPOS OFICIALES')
             .setColor(0x00D4FF)
-            .setImage('attachment://grupos-ai.png')
+            .setImage('attachment://grupos.png')
+            .setFooter({ text: '' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });

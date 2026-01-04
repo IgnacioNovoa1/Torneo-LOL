@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
-    .setDescription('[ADMIN] Genera Playoffs usando Gemini IA')
+    .setDescription('[ADMIN] Genera Playoffs instantáneamente')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -29,15 +29,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         tournament.status = 'eliminatorias';
         await tournament.save();
         
-        await interaction.editReply('🎨 Gemini está dibujando el bracket...');
-        
         const imageBuffer = await imageGenerator.generatePlayoffsImage(tournament.playoffs);
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket-ai.png'});
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket.png'});
         
         const embed = new EmbedBuilder()
             .setTitle('⚔️ PLAYOFFS COCOSCUP')
             .setColor(0xFF4757)
-            .setImage('attachment://bracket-ai.png')
+            .setImage('attachment://bracket.png')
+            .setFooter({ text: 'Sistema Hextech v3.0 (SVG Engine)' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });

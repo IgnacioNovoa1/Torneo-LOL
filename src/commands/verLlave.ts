@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('ver-llave')
-    .setDescription('Muestra la llave de playoffs');
+    .setDescription('Muestra el estado actual de los Playoffs');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
@@ -13,7 +13,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const tournament = await Tournament.findOne({ status: { $in: ['eliminatorias', 'finalizado'] } });
 
         if (!tournament || !tournament.playoffs) {
-            await interaction.editReply('No hay eliminatorias generadas.');
+            await interaction.editReply('No hay eliminatorias activas.');
             return;
         }
 
@@ -26,15 +26,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('BRACKET ACTUAL')
+            .setTitle('🏆 BRACKET DE PLAYOFFS')
             .setColor(0xFFD700)
             .setImage('attachment://bracket.png')
+            .setFooter({ text: 'Sistema Hextech v3.0' })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error mostrando la llave.');
+        await interaction.editReply('Error al mostrar la llave.');
     }
 }
