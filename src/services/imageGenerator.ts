@@ -32,7 +32,7 @@ export class ImageGenerator {
     }
 
     async generateGroupsImage(data: GroupData): Promise<Buffer> {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         const prompt = `
         Genera CÓDIGO SVG puro para una tabla de posiciones de torneo.
