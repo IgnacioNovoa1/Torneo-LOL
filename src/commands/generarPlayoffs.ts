@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
-    .setDescription('[ADMIN] Genera las llaves de eliminatorias con los 2 mejores de cada grupo')
+    .setDescription('[ADMIN] Genera las llaves y análisis IA')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -41,28 +41,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         tournament.status = 'eliminatorias';
         await tournament.save();
-        await interaction.editReply('Generando llave de playoffs...');
+        
+        await interaction.editReply('Analizando cruces y generando llave...');
         
         const imageBuffer = await imageGenerator.generatePlayoffsImage({
             semifinals: tournament.playoffs.semifinals,
             final: tournament.playoffs.final,
             thirdPlace: tournament.playoffs.thirdPlace
         });
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs.png'});
+
+        const cruces = `Semi 1: ${firstA} vs ${secondB}. Semi 2: ${firstB} vs ${secondA}.`;
+        const aiCommentary = await imageGenerator.generateAICommentary(
+            "Comienzan los Playoffs de la CocosCup. Haz una predicción emocionante sobre estos cruces de semifinales.", 
+            cruces
+        );
+
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs-cocoscup.png'});
+        
         const embed = new EmbedBuilder()
-            .setTitle('🏆 PLAYOFFS GENERADOS')
-            .setColor(0xffd700)
-            .setDescription('Las llaves de eliminación directa han sido creadas')
-            .addFields(
-                { name: '⚔️ SEMIFINAL 1', value: `${firstA} vs ${secondB}`, inline: false },
-                { name: '⚔️ SEMIFINAL 2', value: `${firstB} vs ${secondA}`, inline: false },
-                { name: '🏅 FINAL', value: 'Ganador SF1 vs Ganador SF2', inline: false },
-                { name: '🥉 TERCER LUGAR', value: 'Perdedor SF1 vs Perdedor SF2', inline: false }
-            )
-            .setFooter({ text: 'Usa /ver-llave para consultar el estado actual' })
+            .setTitle('⚔️ FASE ELIMINATORIA INICIADA')
+            .setColor(0xFF4757)
+            .setDescription(`**La IA Predice:**\n${aiCommentary}`)
+            .setImage('attachment://playoffs-cocoscup.png')
+            .setFooter({ text: 'Sistema Hextech v2.0 • Powered by Gemini AI' })
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error('Error generando playoffs:', error);

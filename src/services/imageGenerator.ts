@@ -1,8 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createCanvas, CanvasRenderingContext2D } from 'canvas';
-import fetch from 'node-fetch';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+const THEME = {
+    bgStart: '#091428',
+    bgEnd: '#0a323c',
+    gold: '#C8AA6E',
+    goldBright: '#F0E6D2',
+    blueNeon: '#00d4ff',
+    redNeon: '#ff4757',
+    textMain: '#F0E6D2',
+    cardBg: 'rgba(30, 35, 40, 0.7)'
+};
 
 interface GroupData {
     A: { team: string; wins: number; losses: number }[];
@@ -16,309 +26,204 @@ interface PlayoffData {
 }
 
 export class ImageGenerator {
-    
-    async generateGroupsImage(groupData: GroupData): Promise<Buffer> {
+
+    async generateAICommentary(context: string, data: string): Promise<string> {
         try {
-            console.log('Generando imagen de grupos con Canvas...');
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `
+                Eres el narrador oficial (Caster) del torneo de League of Legends "CocosCup".
+                Tu tono es épico, profesional y emocionante.
+                
+                CONTEXTO: ${context}
+                DATOS ACTUALES: ${data}
+                
+                Genera un comentario corto (máximo 3 frases) analizando la situación actual, destacando a los líderes o los enfrentamientos clave. Usa emojis de esports.
+            `;
 
-            const width = 1200;
-            const height = 800;
-            const canvas = createCanvas(width, height);
-            const ctx = canvas.getContext('2d');
-
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, '#0f1419');
-            gradient.addColorStop(1, '#1a1f2e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 60px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('FASE DE GRUPOS', width / 2, 80);
-
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(width / 2 - 200, 100);
-            ctx.lineTo(width / 2 + 200, 100);
-            ctx.stroke();
-
-            const startY = 150;
-            const groupWidth = 500;
-
-            this.drawGroup(ctx, 'GRUPO A', groupData.A, 50, startY, groupWidth, '#00d4ff');
-            this.drawGroup(ctx, 'GRUPO B', groupData.B, width - 50 - groupWidth, startY, groupWidth, '#ff4757');
-
-            ctx.fillStyle = '#888888';
-            ctx.font = '20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Los 2 mejores equipos de cada grupo clasifican a semifinales', width / 2, height - 30);
-
-            return canvas.toBuffer('image/png');
-
+            const result = await model.generateContent(prompt);
+            return result.response.text();
         } catch (error) {
-            console.error('Error generando imagen de grupos:', error);
-            throw error;
+            console.error("Gemini Error:", error);
+            return "¡La Grieta del Invocador nos espera! 🔥";
         }
     }
 
-    private drawGroup(
-        ctx: CanvasRenderingContext2D, 
-        title: string, 
-        teams: Array<{ team: string; wins: number; losses: number }>, 
-        x: number, 
-        y: number, 
-        width: number, 
-        color: string
-    ) {
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, width, 60);
+    private drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, THEME.bgStart);
+        gradient.addColorStop(1, THEME.bgEnd);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
 
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(title, x + width / 2, y + 42);
+        ctx.strokeStyle = 'rgba(200, 170, 110, 0.05)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < width; i += 40) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke();
+        }
+        for (let i = 0; i < height; i += 40) {
+            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke();
+        }
+    }
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.fillRect(x, y + 60, width, teams.length * 70 + 20);
-
+    private drawNeonBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, isWinner: boolean = false) {
+        ctx.shadowBlur = isWinner ? 20 : 0;
+        ctx.shadowColor = color;
+        
+        ctx.fillStyle = THEME.cardBg;
+        ctx.fillRect(x, y, w, h);
+        
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, width, teams.length * 70 + 80);
+        ctx.lineWidth = isWinner ? 3 : 1;
+        ctx.strokeRect(x, y, w, h);
+        
+        ctx.shadowBlur = 0;
+    }
+
+    async generateGroupsImage(groupData: GroupData): Promise<Buffer> {
+        const width = 1200;
+        const height = 800;
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+
+        this.drawBackground(ctx, width, height);
+
+        ctx.fillStyle = THEME.gold;
+        ctx.font = 'bold 60px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = THEME.gold;
+        ctx.shadowBlur = 15;
+        ctx.fillText('FASE DE GRUPOS - COCOSCUP', width / 2, 80);
+        ctx.shadowBlur = 0;
+
+        const startY = 150;
+        const groupWidth = 500;
+
+        this.drawGroupStyled(ctx, 'GRUPO A', groupData.A, 50, startY, groupWidth, THEME.blueNeon);
+        this.drawGroupStyled(ctx, 'GRUPO B', groupData.B, width - 50 - groupWidth, startY, groupWidth, THEME.redNeon);
+
+        return canvas.toBuffer('image/png');
+    }
+
+    private drawGroupStyled(ctx: CanvasRenderingContext2D, title: string, teams: any[], x: number, y: number, width: number, color: string) {
+        ctx.fillStyle = color;
+        ctx.font = 'bold 40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(title, x + width / 2, y - 20);
+
+        this.drawNeonBox(ctx, x, y, width, teams.length * 80 + 20, color);
 
         const sortedTeams = [...teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
 
         sortedTeams.forEach((team, index) => {
-            const teamY = y + 90 + (index * 70);
+            const teamY = y + 50 + (index * 80);
+            
+            if (index < 2) {
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+                ctx.fillRect(x + 5, teamY - 35, width - 10, 60);
+            }
 
-            ctx.fillStyle = index < 2 ? '#00ff00' : '#666666';
-            ctx.font = 'bold 28px sans-serif';
+            ctx.fillStyle = index < 2 ? THEME.gold : '#888';
+            ctx.font = 'bold 30px sans-serif';
             ctx.textAlign = 'left';
-            ctx.fillText(`${index + 1}.`, x + 20, teamY);
+            ctx.fillText(`${index + 1}`, x + 30, teamY);
 
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 24px sans-serif';
-            ctx.fillText(team.team, x + 60, teamY);
+            ctx.fillStyle = THEME.textMain;
+            ctx.fillText(team.team, x + 80, teamY);
 
-            ctx.fillStyle = color;
-            ctx.font = 'bold 28px sans-serif';
+            ctx.fillStyle = index < 2 ? THEME.goldBright : '#aaa';
             ctx.textAlign = 'right';
-            ctx.fillText(`${team.wins}V - ${team.losses}D`, x + width - 20, teamY);
+            ctx.fillText(`${team.wins}W - ${team.losses}L`, x + width - 30, teamY);
+            
+            if (index < teams.length - 1) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.beginPath();
+                ctx.moveTo(x + 20, teamY + 25);
+                ctx.lineTo(x + width - 20, teamY + 25);
+                ctx.stroke();
+            }
         });
     }
 
     async generatePlayoffsImage(playoffData: PlayoffData): Promise<Buffer> {
-        try {
-            console.log('🏆 Generando imagen de playoffs con Canvas...');
+        const width = 1400;
+        const height = 900;
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
 
-            const width = 1400;
-            const height = 1000;
-            const canvas = createCanvas(width, height);
-            const ctx = canvas.getContext('2d');
+        this.drawBackground(ctx, width, height);
 
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, '#0f1419');
-            gradient.addColorStop(1, '#1a1f2e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = THEME.gold;
+        ctx.font = 'bold 60px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 20;
+        ctx.fillText('PLAYOFFS - COCOSCUP', width / 2, 80);
+        ctx.shadowBlur = 0;
 
-            ctx.fillStyle = '#ffd700';
-            ctx.font = 'bold 70px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('🏆 LLAVE DE ELIMINATORIAS', width / 2, 80);
+        const matchWidth = 320;
+        const matchHeight = 120;
+        
+        const startX = 100;
+        const midY = height / 2;
 
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(width / 2 - 250, 100);
-            ctx.lineTo(width / 2 + 250, 100);
-            ctx.stroke();
+        this.drawMatchStyled(ctx, playoffData.semifinals[0], startX, 250, matchWidth, matchHeight, "SEMIFINAL 1");
+        this.drawMatchStyled(ctx, playoffData.semifinals[1], startX, 650, matchWidth, matchHeight, "SEMIFINAL 2");
 
-            const matchWidth = 350;
-            const matchHeight = 100;
-            const spacing = 150;
+        ctx.strokeStyle = THEME.gold;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        ctx.moveTo(startX + matchWidth, 250 + matchHeight/2);
+        ctx.lineTo(width/2 - 160, 250 + matchHeight/2);
+        ctx.lineTo(width/2 - 160, midY);
+        
+        ctx.moveTo(startX + matchWidth, 650 + matchHeight/2);
+        ctx.lineTo(width/2 - 160, 650 + matchHeight/2);
+        ctx.lineTo(width/2 - 160, midY); 
+        ctx.stroke();
 
-            this.drawMatch(
-                ctx,
-                playoffData.semifinals[0],
-                150,
-                250,
-                matchWidth,
-                matchHeight,
-                'SEMIFINAL 1',
-                '#ff6b6b'
-            );
+        this.drawMatchStyled(ctx, playoffData.final, width/2 - matchWidth/2 + 200, midY - matchHeight/2, matchWidth, matchHeight, "GRAN FINAL", true);
 
-            this.drawMatch(
-                ctx,
-                playoffData.semifinals[1],
-                150,
-                250 + matchHeight + spacing,
-                matchWidth,
-                matchHeight,
-                'SEMIFINAL 2',
-                '#ff6b6b'
-            );
+        this.drawMatchStyled(ctx, playoffData.thirdPlace, width - 350, height - 150, 250, 80, "3er LUGAR");
 
-            this.drawMatch(
-                ctx,
-                playoffData.thirdPlace,
-                width - 150 - matchWidth,
-                250,
-                matchWidth,
-                matchHeight,
-                '🥉 TERCER LUGAR',
-                '#cd7f32'
-            );
-
-            this.drawMatch(
-                ctx,
-                playoffData.final,
-                width - 150 - matchWidth,
-                250 + matchHeight + spacing,
-                matchWidth,
-                matchHeight,
-                '🏅 GRAN FINAL',
-                '#ffd700'
-            );
-
-            this.drawConnectors(ctx, matchWidth, matchHeight, spacing, width);
-
-            return canvas.toBuffer('image/png');
-
-        } catch (error) {
-            console.error('Error generando imagen de playoffs:', error);
-            throw error;
-        }
+        return canvas.toBuffer('image/png');
     }
 
-    private drawMatch(
-        ctx: CanvasRenderingContext2D,
-        match: { teamA: string; teamB: string; winner: string | null; played: boolean },
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        label: string,
-        color: string
-    ) {
-        ctx.fillStyle = color;
-        ctx.font = 'bold 24px sans-serif';
+    private drawMatchStyled(ctx: CanvasRenderingContext2D, match: any, x: number, y: number, w: number, h: number, label: string, isFinal: boolean = false) {
+        const borderColor = isFinal ? THEME.gold : THEME.blueNeon;
+        
+        ctx.fillStyle = borderColor;
+        ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(label, x + width / 2, y - 15);
+        ctx.fillText(label, x + w/2, y - 10);
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.fillRect(x, y, width, height);
+        this.drawNeonBox(ctx, x, y, w, h, borderColor, match.played);
 
-        ctx.strokeStyle = match.played ? '#00ff00' : color;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, width, height);
+        const textX = x + 20;
+        const textY_A = y + h/2 - 15;
+        const textY_B = y + h/2 + 25;
 
         const isWinnerA = match.winner === match.teamA;
-        ctx.fillStyle = isWinnerA ? '#00ff00' : '#ffffff';
-        ctx.font = isWinnerA ? 'bold 22px sans-serif' : '20px sans-serif';
+        ctx.fillStyle = isWinnerA ? THEME.goldBright : '#fff';
+        ctx.font = isWinnerA ? 'bold 24px sans-serif' : '20px sans-serif';
         ctx.textAlign = 'left';
-        const teamAText = match.teamA === 'TBD' ? '???' : match.teamA;
-        ctx.fillText(teamAText, x + 20, y + 35);
-
-        ctx.fillStyle = '#888888';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('VS', x + width / 2, y + height / 2 + 5);
+        ctx.fillText(match.teamA === 'TBD' ? '???' : match.teamA, textX, textY_A);
+        if(isWinnerA) {
+            ctx.fillStyle = '#0f0';
+            ctx.fillText('👑', x + w - 30, textY_A);
+        }
 
         const isWinnerB = match.winner === match.teamB;
-        ctx.fillStyle = isWinnerB ? '#00ff00' : '#ffffff';
-        ctx.font = isWinnerB ? 'bold 22px sans-serif' : '20px sans-serif';
-        ctx.textAlign = 'left';
-        const teamBText = match.teamB === 'TBD' ? '???' : match.teamB;
-        ctx.fillText(teamBText, x + 20, y + 75);
-
-        if (match.played && match.winner) {
-            ctx.fillStyle = '#00ff00';
-            ctx.font = 'bold 30px sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText('✓', x + width - 20, y + height / 2 + 10);
+        ctx.fillStyle = isWinnerB ? THEME.goldBright : '#fff';
+        ctx.font = isWinnerB ? 'bold 24px sans-serif' : '20px sans-serif';
+        ctx.fillText(match.teamB === 'TBD' ? '???' : match.teamB, textX, textY_B);
+        if(isWinnerB) {
+            ctx.fillStyle = '#0f0';
+            ctx.fillText('👑', x + w - 30, textY_B);
         }
-    }
 
-    private drawConnectors(
-        ctx: CanvasRenderingContext2D, 
-        matchWidth: number, 
-        matchHeight: number, 
-        spacing: number,
-        canvasWidth: number
-    ) {
-        const leftX = 150 + matchWidth;
-        const rightX = canvasWidth - 150 - matchWidth;
-        const midX = (leftX + rightX) / 2;
-
-        const sf1Y = 250 + matchHeight / 2;
-        const sf2Y = 250 + matchHeight + spacing + matchHeight / 2;
-        const thirdY = 250 + matchHeight / 2;
-        const finalY = 250 + matchHeight + spacing + matchHeight / 2;
-
-        ctx.strokeStyle = '#888888';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 5]);
-
-        ctx.beginPath();
-        ctx.moveTo(leftX, sf1Y);
-        ctx.lineTo(midX, sf1Y);
-        ctx.lineTo(midX, sf2Y);
-        ctx.lineTo(leftX, sf2Y);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(midX, thirdY);
-        ctx.lineTo(rightX, thirdY);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(midX, finalY);
-        ctx.lineTo(rightX, finalY);
-        ctx.stroke();
-
-        ctx.setLineDash([]);
-    }
-
-    async generateArtisticBanner(tournamentName: string, teams: string[]): Promise<string | null> {
-        try {
-            console.log('Generando banner artístico con Gemini...');
-
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-            const prompt = `Crea una descripción visual detallada para un banner profesional de esports de League of Legends para el torneo "${tournamentName}".
-
-El banner debe incluir:
-- Estilo visual: futurista, cyberpunk, oscuro con neones azules y rojos
-- Elementos: summoner's rift estilizado, nexus, cristales brillantes
-- Ambiente: competitivo, épico, profesional
-- Colores: principalmente negro, azul neón (#00d4ff), rojo neón (#ff4757), dorado (#ffd700)
-- Texto central: "${tournamentName}"
-- Equipos participantes: ${teams.join(', ')}
-
-NO incluyas texto en la imagen, solo diseño visual puro.
-
-Responde solo con la descripción del diseño.`;
-
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const description = response.text();
-
-            console.log('✅ Descripción generada:', description);
-
-            // Nota: Gemini 2.0 actualmente no genera imágenes directamente
-            // Solo genera descripciones. Para generar imágenes necesitarías:
-            // 1. Usar Imagen 3 (requiere Vertex AI en GCP)
-            // 2. O usar la descripción con otro servicio como DALL-E, Midjourney, etc.
-
-            return description;
-
-        } catch (error) {
-            console.error('Error generando banner con Gemini:', error);
-            return null;
-        }
+        ctx.fillStyle = '#555';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('VS', x + w/2, y + h/2 + 5);
     }
 }
 

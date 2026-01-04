@@ -1,11 +1,11 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, Attachment, AttachmentBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { Tournament } from '../models/Tournament';
 import { Team } from '../models/Team';
 import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-grupos')
-    .setDescription('[ADMIN] Genera los grupos de la fase de grupos aleatoriamente')
+    .setDescription('[ADMIN] Genera los grupos y el análisis de la IA')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -52,24 +52,30 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await tournament.save();
         }
 
-        await interaction.editReply('Generando imagen de grupo...');
+        await interaction.editReply('Generando análisis y visuales con IA...');
+
         const imageBuffer = await imageGenerator.generateGroupsImage({
             A: tournament.groupStandings.A,
             B: tournament.groupStandings.B
         });
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos.png'});
+
+        const dataString = `Grupo A: ${groupA.join(', ')}. Grupo B: ${groupB.join(', ')}.`;
+        const aiCommentary = await imageGenerator.generateAICommentary(
+            "Se acaban de sortear los grupos de la CocosCup. Analiza el equilibrio de los grupos.", 
+            dataString
+        );
+
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-cocoscup.png'});
+        
         const embed = new EmbedBuilder()
-            .setTitle('FASE DE GRUPOS GENERADA')
-            .setColor(0x00ff00)
-            .addFields(
-                { name: '🔵 GRUPO A', value: groupA.map((t, i) => `${i + 1}. ${t}`).join('\n'), inline: true },
-                { name: '🔴 GRUPO B', value: groupB.map((t, i) => `${i + 1}. ${t}`).join('\n'), inline: true }
-            )
-            .setImage('attachment://grupos.png')
-            .setFooter({ text: 'Usa /ver-grupos para consultar los grupos' })
+            .setTitle('🏆 ¡GRUPOS DEFINIDOS COCOSCUP!')
+            .setColor(0xC8AA6E)
+            .setDescription(`**Análisis de la IA:**\n${aiCommentary}`)
+            .setImage('attachment://grupos-cocoscup.png')
+            .setFooter({ text: 'Sistema Hextech v2.0 • Powered by Gemini AI' })
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error('Error generando grupos:', error);
