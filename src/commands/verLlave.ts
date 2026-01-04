@@ -17,11 +17,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        const imageBuffer = await imageGenerator.generatePlayoffsImage({
-            semifinals: tournament.playoffs.semifinals,
-            final: tournament.playoffs.final,
-            thirdPlace: tournament.playoffs.thirdPlace
-        });
+        const imageBuffer = await imageGenerator.generatePlayoffsImage(tournament.playoffs);
 
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket.png' });
 
@@ -29,7 +25,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle('BRACKET ACTUAL')
             .setColor(0xFFD700)
             .setImage('attachment://bracket.png')
-            .setFooter({ text: 'Sistema Hextech v4.0' })
+            .setFooter({ text: 'CocosCup Oficial' })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });

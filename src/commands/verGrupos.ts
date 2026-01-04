@@ -28,7 +28,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle('TABLA DE GRUPOS')
             .setColor(0x0099ff)
             .setImage('attachment://grupos.png')
-            .setFooter({ text: 'Sistema Hextech v4.0' })
+            .setFooter({ text: 'CocosCup Oficial' })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });

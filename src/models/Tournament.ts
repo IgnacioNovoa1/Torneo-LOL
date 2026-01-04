@@ -29,7 +29,7 @@ export interface ITournament extends Document {
     playoffs: {
         semifinals: IMatch[];
         final: IMatch;
-        thirdPlace: IMatch;
+        thirdPlace?: IMatch;
     };
 }
 

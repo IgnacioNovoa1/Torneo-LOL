@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
-    .setDescription('[ADMIN] Genera Playoffs')
+    .setDescription('[ADMIN] Genera Playoffs (Semis BO1 + Final BO3)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -17,14 +17,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const sortedA = tournament.groupStandings.A.sort((a, b) => b.wins - a.wins);
         const sortedB = tournament.groupStandings.B.sort((a, b) => b.wins - a.wins);
 
-        if (sortedA.length < 2 || sortedB.length < 2) { await interaction.editReply('Faltan equipos.'); return; }
+        if (sortedA.length < 2 || sortedB.length < 2) { await interaction.editReply('Faltan equipos en los grupos.'); return; }
 
-        tournament.playoffs.semifinals = [
-            { teamA: sortedA[0].team, teamB: sortedB[1].team, winner: null, scoreA: 0, scoreB: 0, played: false },
-            { teamA: sortedB[0].team, teamB: sortedA[1].team, winner: null, scoreA: 0, scoreB: 0, played: false }
-        ];
-        tournament.playoffs.final = { teamA: 'TBD', teamB: 'TBD', winner: null, scoreA: 0, scoreB: 0, played: false };
-        tournament.playoffs.thirdPlace = { teamA: 'TBD', teamB: 'TBD', winner: null, scoreA: 0, scoreB: 0, played: false };
+        tournament.playoffs = {
+            semifinals: [
+                { teamA: sortedA[0].team, teamB: sortedB[1].team, winner: null, scoreA: 0, scoreB: 0, played: false },
+                { teamA: sortedB[0].team, teamB: sortedA[1].team, winner: null, scoreA: 0, scoreB: 0, played: false }
+            ],
+            final: { teamA: 'TBD', teamB: 'TBD', winner: null, scoreA: 0, scoreB: 0, played: false }
+        };
         
         tournament.status = 'eliminatorias';
         await tournament.save();
@@ -34,9 +35,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         
         const embed = new EmbedBuilder()
             .setTitle('⚔️ PLAYOFFS COCOSCUP')
-            .setColor(0xFF4757)
+            .setColor(0xC8AA6E)
+            .setDescription('**Formato:** Semifinales BO1 • Gran Final BO3')
             .setImage('attachment://bracket.png')
-            .setFooter({ text: 'Sistema Hextech v4.0' })
+            .setFooter({ text: 'CocosCup Oficial' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });

@@ -52,7 +52,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle('🏆 GRUPOS OFICIALES')
             .setColor(0x00D4FF)
             .setImage('attachment://grupos.png')
-            .setFooter({ text: 'Sistema Hextech v4.0' })
+            .setFooter({ text: 'CocosCup Oficial' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
