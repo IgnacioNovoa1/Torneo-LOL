@@ -32,7 +32,6 @@
     "socket.io": "^4.8.3",
     "ws": "^8.18.3",
     "canvas": "^2.11.2",
-    "league-connect": "^6.1.1",
     "replicate": "^0.34.1"
   },
   "devDependencies": {
