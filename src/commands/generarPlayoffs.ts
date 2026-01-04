@@ -48,22 +48,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             thirdPlace: tournament.playoffs.thirdPlace
         });
 
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs-cocoscup.png'});
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs.png'});
         
         const embed = new EmbedBuilder()
-            .setTitle('⚔️ FASE ELIMINATORIA INICIADA')
+            .setTitle('⚔️ FASE ELIMINATORIA')
             .setColor(0xFF4757)
-            .setDescription('Los cruces de semifinales han sido definidos.')
-            .setImage('attachment://playoffs-cocoscup.png')
-            .setFooter({ text: 'Sistema Hextech v2.0' })
+            .setImage('attachment://playoffs.png')
+            .setFooter({ text: 'CocosCup Oficial' })
             .setTimestamp();
 
-        await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
+        await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        try {
-            await interaction.editReply('Error al generar playoffs.');
-        } catch (e) {}
+        await interaction.editReply('Error al generar playoffs.');
     }
 }

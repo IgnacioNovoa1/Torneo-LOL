@@ -1,22 +1,12 @@
-import { createCanvas, CanvasRenderingContext2D, registerFont } from 'canvas';
-import path from 'path';
-
-try {
-    const fontPath = path.join(__dirname, '../assets/fonts/font.ttf');
-    registerFont(fontPath, { family: 'TournamentFont' });
-} catch (error) {
-    console.error(error);
-}
+import axios from 'axios';
 
 const THEME = {
-    bgStart: '#091428',
-    bgEnd: '#0a323c',
+    bg: '#091428',
+    cardBg: 'rgba(30, 35, 40, 0.9)',
     gold: '#C8AA6E',
-    goldBright: '#F0E6D2',
-    blueNeon: '#00d4ff',
-    redNeon: '#ff4757',
-    textMain: '#F0E6D2',
-    cardBg: '#1e2328'
+    blue: '#00d4ff',
+    red: '#ff4757',
+    text: '#F0E6D2'
 };
 
 interface GroupData {
@@ -32,178 +22,121 @@ interface PlayoffData {
 
 export class ImageGenerator {
 
-    private drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number) {
-        ctx.fillStyle = THEME.bgStart;
-        ctx.fillRect(0, 0, width, height);
+    async generateGroupsImage(data: GroupData): Promise<Buffer> {
+        const html = `
+        <html>
+        <head>
+            <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
+            <style>
+                body { margin:0; padding: 40px; background: ${THEME.bg}; font-family: 'Oswald', sans-serif; color: ${THEME.text}; }
+                .title { text-align: center; font-size: 60px; color: ${THEME.gold}; text-transform: uppercase; margin-bottom: 40px; text-shadow: 0 0 20px rgba(200,170,110,0.5); }
+                .container { display: flex; justify-content: space-between; gap: 40px; }
+                .group { flex: 1; background: ${THEME.cardBg}; border: 2px solid #333; padding: 20px; border-radius: 10px; }
+                .group-header { text-align: center; font-size: 40px; margin-bottom: 20px; border-bottom: 3px solid; padding-bottom: 10px; }
+                .header-a { color: ${THEME.blue}; border-color: ${THEME.blue}; }
+                .header-b { color: ${THEME.red}; border-color: ${THEME.red}; }
+                .row { display: flex; justify-content: space-between; font-size: 30px; padding: 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+                .top-2 { color: ${THEME.gold}; font-weight: bold; background: linear-gradient(90deg, transparent, rgba(200,170,110,0.1)); }
+                .rank { width: 40px; }
+                .wins { text-align: right; }
+            </style>
+        </head>
+        <body>
+            <div class="title">Fase de Grupos - CocosCup</div>
+            <div class="container">
+                <div class="group">
+                    <div class="group-header header-a">GRUPO A</div>
+                    ${this.renderGroupRows(data.A)}
+                </div>
+                <div class="group">
+                    <div class="group-header header-b">GRUPO B</div>
+                    ${this.renderGroupRows(data.B)}
+                </div>
+            </div>
+        </body>
+        </html>`;
 
-        const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, THEME.bgStart);
-        gradient.addColorStop(1, THEME.bgEnd);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
+        return this.fetchImageFromAPI(html, 1200, 800);
+    }
 
-        ctx.strokeStyle = 'rgba(200, 170, 110, 0.1)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 0; i < width; i += 60) {
-            ctx.moveTo(i, 0); ctx.lineTo(i, height);
+    private renderGroupRows(teams: any[]) {
+        const sorted = [...teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+        return sorted.map((t, i) => `
+            <div class="row ${i < 2 ? 'top-2' : ''}">
+                <span class="rank">${i + 1}.</span>
+                <span class="name">${t.team}</span>
+                <span class="wins">${t.wins}W - ${t.losses}L</span>
+            </div>
+        `).join('');
+    }
+
+    async generatePlayoffsImage(data: PlayoffData): Promise<Buffer> {
+        const html = `
+        <html>
+        <head>
+            <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
+            <style>
+                body { margin:0; padding: 20px; background: ${THEME.bg}; font-family: 'Oswald', sans-serif; color: ${THEME.text}; display: flex; flex-direction: column; align-items: center; }
+                .main-title { font-size: 50px; color: ${THEME.gold}; margin-bottom: 50px; text-shadow: 0 0 20px ${THEME.gold}; }
+                .bracket { display: flex; justify-content: center; align-items: center; gap: 80px; width: 100%; }
+                .col { display: flex; flex-direction: column; gap: 80px; }
+                .match { width: 350px; background: ${THEME.cardBg}; border: 2px solid ${THEME.gold}; padding: 15px; position: relative; }
+                .match-label { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: ${THEME.bg}; padding: 0 10px; color: ${THEME.blue}; font-size: 14px; border: 1px solid ${THEME.blue}; }
+                .final-label { color: ${THEME.gold}; border-color: ${THEME.gold}; }
+                .team { display: flex; justify-content: space-between; font-size: 24px; padding: 5px; }
+                .winner { color: #00ff00; text-shadow: 0 0 10px rgba(0,255,0,0.5); }
+                .tbd { color: #555; }
+                .connector { height: 2px; background: ${THEME.gold}; width: 80px; }
+            </style>
+        </head>
+        <body>
+            <div class="main-title">PLAYOFFS - COCOSCUP</div>
+            <div class="bracket">
+                <div class="col">
+                    ${this.renderMatch(data.semifinals[0], "SEMIFINAL 1")}
+                    ${this.renderMatch(data.semifinals[1], "SEMIFINAL 2")}
+                </div>
+                <div class="col" style="justify-content: center;">
+                    ${this.renderMatch(data.final, "GRAN FINAL", true)}
+                </div>
+            </div>
+            <div style="margin-top: 50px; transform: scale(0.8);">
+                ${this.renderMatch(data.thirdPlace, "3er LUGAR")}
+            </div>
+        </body>
+        </html>`;
+
+        return this.fetchImageFromAPI(html, 1000, 800);
+    }
+
+    private renderMatch(match: any, label: string, isFinal = false) {
+        const teamAClass = match.winner === match.teamA ? 'winner' : '';
+        const teamBClass = match.winner === match.teamB ? 'winner' : '';
+        const labelClass = isFinal ? 'final-label' : '';
+
+        return `
+        <div class="match" style="border-color: ${isFinal ? THEME.gold : THEME.blue}">
+            <div class="match-label ${labelClass}">${label}</div>
+            <div class="team ${teamAClass}">${match.teamA === 'TBD' ? '<span class="tbd">???</span>' : match.teamA} ${match.winner === match.teamA ? '👑' : ''}</div>
+            <div style="height:1px; background:#444; margin: 5px 0;"></div>
+            <div class="team ${teamBClass}">${match.teamB === 'TBD' ? '<span class="tbd">???</span>' : match.teamB} ${match.winner === match.teamB ? '👑' : ''}</div>
+        </div>`;
+    }
+
+    private async fetchImageFromAPI(html: string, width: number, height: number): Promise<Buffer> {
+        try {
+            const response = await axios.post('https://quickchart.io/v2/html', {
+                html: html,
+                width: width,
+                height: height,
+                backgroundColor: THEME.bg
+            }, { responseType: 'arraybuffer' });
+
+            return Buffer.from(response.data);
+        } catch (error) {
+            console.error("Error QuickChart:", error);
+            throw new Error("Error generando imagen externa");
         }
-        for (let i = 0; i < height; i += 60) {
-            ctx.moveTo(0, i); ctx.lineTo(width, i);
-        }
-        ctx.stroke();
-    }
-
-    private drawNeonBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, isWinner: boolean = false) {
-        ctx.fillStyle = THEME.cardBg;
-        ctx.fillRect(x, y, w, h);
-        
-        ctx.strokeStyle = color;
-        ctx.lineWidth = isWinner ? 4 : 2;
-        ctx.strokeRect(x, y, w, h);
-    }
-
-    async generateGroupsImage(groupData: GroupData): Promise<Buffer> {
-        const width = 1200;
-        const height = 800;
-        const canvas = createCanvas(width, height);
-        const ctx = canvas.getContext('2d');
-
-        this.drawBackground(ctx, width, height);
-
-        ctx.fillStyle = THEME.gold;
-        ctx.font = 'bold 60px "TournamentFont"'; 
-        ctx.textAlign = 'center';
-        ctx.fillText('FASE DE GRUPOS - COCOSCUP', width / 2, 80);
-
-        const startY = 150;
-        const groupWidth = 500;
-
-        this.drawGroupStyled(ctx, 'GRUPO A', groupData.A, 50, startY, groupWidth, THEME.blueNeon);
-        this.drawGroupStyled(ctx, 'GRUPO B', groupData.B, width - 50 - groupWidth, startY, groupWidth, THEME.redNeon);
-
-        return canvas.toBuffer('image/png');
-    }
-
-    private drawGroupStyled(ctx: CanvasRenderingContext2D, title: string, teams: any[], x: number, y: number, width: number, color: string) {
-        ctx.fillStyle = color;
-        ctx.font = 'bold 40px "TournamentFont"';
-        ctx.textAlign = 'center';
-        ctx.fillText(title, x + width / 2, y - 20);
-
-        this.drawNeonBox(ctx, x, y, width, teams.length * 80 + 20, color);
-
-        const sortedTeams = [...teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-
-        sortedTeams.forEach((team, index) => {
-            const teamY = y + 50 + (index * 80);
-            
-            if (index < 2) {
-                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
-                ctx.fillRect(x + 5, teamY - 35, width - 10, 60);
-            }
-
-            ctx.fillStyle = index < 2 ? THEME.gold : '#888';
-            ctx.font = 'bold 30px "TournamentFont"';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${index + 1}.`, x + 30, teamY);
-
-            ctx.fillStyle = THEME.textMain;
-            ctx.fillText(team.team, x + 80, teamY);
-
-            ctx.fillStyle = index < 2 ? THEME.goldBright : '#aaa';
-            ctx.textAlign = 'right';
-            ctx.fillText(`${team.wins}W - ${team.losses}L`, x + width - 30, teamY);
-            
-            if (index < teams.length - 1) {
-                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-                ctx.beginPath();
-                ctx.moveTo(x + 20, teamY + 25);
-                ctx.lineTo(x + width - 20, teamY + 25);
-                ctx.stroke();
-            }
-        });
-    }
-
-    async generatePlayoffsImage(playoffData: PlayoffData): Promise<Buffer> {
-        const width = 1400;
-        const height = 900;
-        const canvas = createCanvas(width, height);
-        const ctx = canvas.getContext('2d');
-
-        this.drawBackground(ctx, width, height);
-
-        ctx.fillStyle = THEME.gold;
-        ctx.font = 'bold 60px "TournamentFont"';
-        ctx.textAlign = 'center';
-        ctx.fillText('PLAYOFFS - COCOSCUP', width / 2, 80);
-
-        const matchWidth = 320;
-        const matchHeight = 120;
-        
-        const startX = 100;
-        const midY = height / 2;
-
-        this.drawMatchStyled(ctx, playoffData.semifinals[0], startX, 250, matchWidth, matchHeight, "SEMIFINAL 1");
-        this.drawMatchStyled(ctx, playoffData.semifinals[1], startX, 650, matchWidth, matchHeight, "SEMIFINAL 2");
-
-        ctx.strokeStyle = THEME.gold;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        
-        ctx.moveTo(startX + matchWidth, 250 + matchHeight/2);
-        ctx.lineTo(width/2 - 160, 250 + matchHeight/2);
-        ctx.lineTo(width/2 - 160, midY);
-        
-        ctx.moveTo(startX + matchWidth, 650 + matchHeight/2);
-        ctx.lineTo(width/2 - 160, 650 + matchHeight/2);
-        ctx.lineTo(width/2 - 160, midY); 
-        ctx.stroke();
-
-        this.drawMatchStyled(ctx, playoffData.final, width/2 - matchWidth/2 + 200, midY - matchHeight/2, matchWidth, matchHeight, "GRAN FINAL", true);
-
-        this.drawMatchStyled(ctx, playoffData.thirdPlace, width - 350, height - 150, 250, 80, "3er LUGAR");
-
-        return canvas.toBuffer('image/png');
-    }
-
-    private drawMatchStyled(ctx: CanvasRenderingContext2D, match: any, x: number, y: number, w: number, h: number, label: string, isFinal: boolean = false) {
-        const borderColor = isFinal ? THEME.gold : THEME.blueNeon;
-        
-        ctx.fillStyle = borderColor;
-        ctx.font = 'bold 20px "TournamentFont"';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, x + w/2, y - 10);
-
-        this.drawNeonBox(ctx, x, y, w, h, borderColor, match.played);
-
-        const textX = x + 20;
-        const textY_A = y + h/2 - 15;
-        const textY_B = y + h/2 + 25;
-
-        const isWinnerA = match.winner === match.teamA;
-        ctx.fillStyle = isWinnerA ? THEME.goldBright : '#fff';
-        ctx.font = isWinnerA ? 'bold 24px "TournamentFont"' : '20px "TournamentFont"';
-        ctx.textAlign = 'left';
-        ctx.fillText(match.teamA === 'TBD' ? '???' : match.teamA, textX, textY_A);
-        if(isWinnerA) {
-            ctx.fillStyle = '#0f0';
-            ctx.fillText('👑', x + w - 40, textY_A);
-        }
-
-        const isWinnerB = match.winner === match.teamB;
-        ctx.fillStyle = isWinnerB ? THEME.goldBright : '#fff';
-        ctx.font = isWinnerB ? 'bold 24px "TournamentFont"' : '20px "TournamentFont"';
-        ctx.fillText(match.teamB === 'TBD' ? '???' : match.teamB, textX, textY_B);
-        if(isWinnerB) {
-            ctx.fillStyle = '#0f0';
-            ctx.fillText('👑', x + w - 40, textY_B);
-        }
-
-        ctx.fillStyle = '#666';
-        ctx.font = '14px "TournamentFont"';
-        ctx.textAlign = 'center';
-        ctx.fillText('VS', x + w/2, y + h/2 + 5);
     }
 }
 

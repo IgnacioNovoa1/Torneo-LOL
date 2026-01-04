@@ -15,12 +15,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const teams = await Team.find({ active: true });
 
         if (teams.length < 4) {
-            await interaction.editReply('Se necesitan al menos 4 equipos inscritos para generar grupos.');
+            await interaction.editReply('Se necesitan al menos 4 equipos inscritos.');
             return;
         }
 
         if (teams.length % 4 !== 0) {
-            await interaction.editReply(`La cantidad de equipos debe ser múltiplo de 4. Actualmente hay ${teams.length} equipos.`);
+            await interaction.editReply(`La cantidad de equipos debe ser múltiplo de 4. Hay ${teams.length}.`);
             return;
         }
 
@@ -57,22 +57,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             B: tournament.groupStandings.B
         });
 
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-cocoscup.png'});
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos.png'});
         
         const embed = new EmbedBuilder()
-            .setTitle('🏆 GRUPOS DEFINIDOS COCOSCUP')
+            .setTitle('🏆 ¡GRUPOS DEFINIDOS!')
             .setColor(0xC8AA6E)
-            .setDescription('Sorteo oficial de la fase de grupos.')
-            .setImage('attachment://grupos-cocoscup.png')
-            .setFooter({ text: 'Sistema Hextech v2.0' })
+            .setImage('attachment://grupos.png')
+            .setFooter({ text: 'CocosCup Oficial' })
             .setTimestamp();
 
-        await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
+        await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        try {
-            await interaction.editReply('Error al generar grupos.');
-        } catch (e) {}
+        await interaction.editReply('Error al generar grupos. Revisa logs.');
     }
 }

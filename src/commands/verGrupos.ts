@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('ver-grupos')
-    .setDescription('Muestra los grupos y sus posiciones actuales');
+    .setDescription('Muestra las tablas de posiciones actuales');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
@@ -12,8 +12,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     try {
         const tournament = await Tournament.findOne({ status: { $in: ['grupos', 'eliminatorias'] } });
 
-        if (!tournament || tournament.groups.A.length === 0) {
-            await interaction.editReply('Aún no se han generado los grupos.');
+        if (!tournament || !tournament.groupStandings) {
+            await interaction.editReply('No hay grupos activos actualmente.');
             return;
         }
 
@@ -22,20 +22,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             B: tournament.groupStandings.B
         });
 
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-actualizados.png' });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'posiciones.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('FASE DE GRUPOS')
+            .setTitle('📊 TABLA DE POSICIONES')
             .setColor(0x0099ff)
-            .setDescription('Posiciones actualizadas')
-            .setImage('attachment://grupos-actualizados.png')
-            .setFooter({ text: 'Los 2 mejores de cada grupo clasifican a semifinales' })
+            .setImage('attachment://posiciones.png')
+            .setFooter({ text: 'Actualizado en tiempo real' })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
-        console.error('Error mostrando grupos:', error);
-        await interaction.editReply('Error al mostrar grupos.');
+        console.error(error);
+        await interaction.editReply('Error al obtener grupos.');
     }
 }
