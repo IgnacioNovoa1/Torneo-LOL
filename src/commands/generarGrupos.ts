@@ -5,7 +5,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-grupos')
-    .setDescription('[ADMIN] Genera los grupos y el análisis de la IA')
+    .setDescription('[ADMIN] Genera los grupos aleatoriamente')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -52,27 +52,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await tournament.save();
         }
 
-        await interaction.editReply('Generando análisis y visuales con IA...');
+        await interaction.editReply('Generando imagen de grupos...');
 
         const imageBuffer = await imageGenerator.generateGroupsImage({
             A: tournament.groupStandings.A,
             B: tournament.groupStandings.B
         });
 
-        const dataString = `Grupo A: ${groupA.join(', ')}. Grupo B: ${groupB.join(', ')}.`;
-        const aiCommentary = await imageGenerator.generateAICommentary(
-            "Se acaban de sortear los grupos de la CocosCup. Analiza el equilibrio de los grupos.", 
-            dataString
-        );
-
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-cocoscup.png'});
         
         const embed = new EmbedBuilder()
             .setTitle('🏆 ¡GRUPOS DEFINIDOS COCOSCUP!')
             .setColor(0xC8AA6E)
-            .setDescription(`**Análisis de la IA:**\n${aiCommentary}`)
+            .setDescription('Los grupos han sido sorteados aleatoriamente.')
             .setImage('attachment://grupos-cocoscup.png')
-            .setFooter({ text: 'Sistema Hextech v2.0 • Powered by Gemini AI' })
+            .setFooter({ text: 'Sistema Hextech v2.0' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });

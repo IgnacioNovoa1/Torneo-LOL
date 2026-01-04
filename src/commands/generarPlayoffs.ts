@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
-    .setDescription('[ADMIN] Genera las llaves y análisis IA')
+    .setDescription('[ADMIN] Genera las llaves de eliminatorias')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -14,7 +14,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const tournament = await Tournament.findOne({ status: 'grupos' });
 
         if (!tournament) {
-            await interaction.editReply('No hay un torneo en fase de grupos.');
+            await interaction.editReply('No hay un torneo en fase de grupos activa.');
             return;
         }
 
@@ -42,7 +42,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         tournament.status = 'eliminatorias';
         await tournament.save();
         
-        await interaction.editReply('Analizando cruces y generando llave...');
+        await interaction.editReply('Generando llave de playoffs...');
         
         const imageBuffer = await imageGenerator.generatePlayoffsImage({
             semifinals: tournament.playoffs.semifinals,
@@ -50,20 +50,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             thirdPlace: tournament.playoffs.thirdPlace
         });
 
-        const cruces = `Semi 1: ${firstA} vs ${secondB}. Semi 2: ${firstB} vs ${secondA}.`;
-        const aiCommentary = await imageGenerator.generateAICommentary(
-            "Comienzan los Playoffs de la CocosCup. Haz una predicción emocionante sobre estos cruces de semifinales.", 
-            cruces
-        );
-
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs-cocoscup.png'});
         
         const embed = new EmbedBuilder()
             .setTitle('⚔️ FASE ELIMINATORIA INICIADA')
             .setColor(0xFF4757)
-            .setDescription(`**La IA Predice:**\n${aiCommentary}`)
+            .setDescription('Los cruces de semifinales han sido definidos.')
             .setImage('attachment://playoffs-cocoscup.png')
-            .setFooter({ text: 'Sistema Hextech v2.0 • Powered by Gemini AI' })
+            .setFooter({ text: 'Sistema Hextech v2.0' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });

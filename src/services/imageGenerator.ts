@@ -1,7 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createCanvas, CanvasRenderingContext2D } from 'canvas';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const THEME = {
     bgStart: '#091428',
@@ -11,7 +8,7 @@ const THEME = {
     blueNeon: '#00d4ff',
     redNeon: '#ff4757',
     textMain: '#F0E6D2',
-    cardBg: 'rgba(30, 35, 40, 0.7)'
+    cardBg: '#1e2328'
 };
 
 interface GroupData {
@@ -27,56 +24,35 @@ interface PlayoffData {
 
 export class ImageGenerator {
 
-    async generateAICommentary(context: string, data: string): Promise<string> {
-        try {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            const prompt = `
-                Eres el narrador oficial (Caster) del torneo de League of Legends "CocosCup".
-                Tu tono es épico, profesional y emocionante.
-                
-                CONTEXTO: ${context}
-                DATOS ACTUALES: ${data}
-                
-                Genera un comentario corto (máximo 3 frases) analizando la situación actual, destacando a los líderes o los enfrentamientos clave. Usa emojis de esports.
-            `;
-
-            const result = await model.generateContent(prompt);
-            return result.response.text();
-        } catch (error) {
-            console.error("Gemini Error:", error);
-            return "¡La Grieta del Invocador nos espera! 🔥";
-        }
-    }
-
     private drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number) {
+        ctx.fillStyle = THEME.bgStart;
+        ctx.fillRect(0, 0, width, height);
+
         const gradient = ctx.createLinearGradient(0, 0, 0, height);
         gradient.addColorStop(0, THEME.bgStart);
         gradient.addColorStop(1, THEME.bgEnd);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
 
-        ctx.strokeStyle = 'rgba(200, 170, 110, 0.05)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < width; i += 40) {
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke();
+        ctx.strokeStyle = 'rgba(200, 170, 110, 0.1)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < width; i += 50) {
+            ctx.moveTo(i, 0); ctx.lineTo(i, height);
         }
-        for (let i = 0; i < height; i += 40) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke();
+        for (let i = 0; i < height; i += 50) {
+            ctx.moveTo(0, i); ctx.lineTo(width, i);
         }
+        ctx.stroke();
     }
 
     private drawNeonBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, isWinner: boolean = false) {
-        ctx.shadowBlur = isWinner ? 20 : 0;
-        ctx.shadowColor = color;
-        
         ctx.fillStyle = THEME.cardBg;
         ctx.fillRect(x, y, w, h);
         
         ctx.strokeStyle = color;
-        ctx.lineWidth = isWinner ? 3 : 1;
+        ctx.lineWidth = isWinner ? 4 : 2;
         ctx.strokeRect(x, y, w, h);
-        
-        ctx.shadowBlur = 0;
     }
 
     async generateGroupsImage(groupData: GroupData): Promise<Buffer> {
@@ -88,12 +64,9 @@ export class ImageGenerator {
         this.drawBackground(ctx, width, height);
 
         ctx.fillStyle = THEME.gold;
-        ctx.font = 'bold 60px sans-serif';
+        ctx.font = 'bold 60px Arial';
         ctx.textAlign = 'center';
-        ctx.shadowColor = THEME.gold;
-        ctx.shadowBlur = 15;
         ctx.fillText('FASE DE GRUPOS - COCOSCUP', width / 2, 80);
-        ctx.shadowBlur = 0;
 
         const startY = 150;
         const groupWidth = 500;
@@ -106,7 +79,7 @@ export class ImageGenerator {
 
     private drawGroupStyled(ctx: CanvasRenderingContext2D, title: string, teams: any[], x: number, y: number, width: number, color: string) {
         ctx.fillStyle = color;
-        ctx.font = 'bold 40px sans-serif';
+        ctx.font = 'bold 40px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(title, x + width / 2, y - 20);
 
@@ -123,9 +96,9 @@ export class ImageGenerator {
             }
 
             ctx.fillStyle = index < 2 ? THEME.gold : '#888';
-            ctx.font = 'bold 30px sans-serif';
+            ctx.font = 'bold 30px Arial';
             ctx.textAlign = 'left';
-            ctx.fillText(`${index + 1}`, x + 30, teamY);
+            ctx.fillText(`${index + 1}.`, x + 30, teamY);
 
             ctx.fillStyle = THEME.textMain;
             ctx.fillText(team.team, x + 80, teamY);
@@ -153,11 +126,9 @@ export class ImageGenerator {
         this.drawBackground(ctx, width, height);
 
         ctx.fillStyle = THEME.gold;
-        ctx.font = 'bold 60px sans-serif';
+        ctx.font = 'bold 60px Arial';
         ctx.textAlign = 'center';
-        ctx.shadowBlur = 20;
         ctx.fillText('PLAYOFFS - COCOSCUP', width / 2, 80);
-        ctx.shadowBlur = 0;
 
         const matchWidth = 320;
         const matchHeight = 120;
@@ -169,7 +140,7 @@ export class ImageGenerator {
         this.drawMatchStyled(ctx, playoffData.semifinals[1], startX, 650, matchWidth, matchHeight, "SEMIFINAL 2");
 
         ctx.strokeStyle = THEME.gold;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
         
         ctx.moveTo(startX + matchWidth, 250 + matchHeight/2);
@@ -192,7 +163,7 @@ export class ImageGenerator {
         const borderColor = isFinal ? THEME.gold : THEME.blueNeon;
         
         ctx.fillStyle = borderColor;
-        ctx.font = 'bold 16px sans-serif';
+        ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(label, x + w/2, y - 10);
 
@@ -204,25 +175,26 @@ export class ImageGenerator {
 
         const isWinnerA = match.winner === match.teamA;
         ctx.fillStyle = isWinnerA ? THEME.goldBright : '#fff';
-        ctx.font = isWinnerA ? 'bold 24px sans-serif' : '20px sans-serif';
+        ctx.font = isWinnerA ? 'bold 24px Arial' : '20px Arial';
         ctx.textAlign = 'left';
         ctx.fillText(match.teamA === 'TBD' ? '???' : match.teamA, textX, textY_A);
         if(isWinnerA) {
             ctx.fillStyle = '#0f0';
-            ctx.fillText('👑', x + w - 30, textY_A);
+            ctx.fillText('👑', x + w - 40, textY_A);
         }
 
         const isWinnerB = match.winner === match.teamB;
         ctx.fillStyle = isWinnerB ? THEME.goldBright : '#fff';
-        ctx.font = isWinnerB ? 'bold 24px sans-serif' : '20px sans-serif';
+        ctx.font = isWinnerB ? 'bold 24px Arial' : '20px Arial';
         ctx.fillText(match.teamB === 'TBD' ? '???' : match.teamB, textX, textY_B);
         if(isWinnerB) {
             ctx.fillStyle = '#0f0';
-            ctx.fillText('👑', x + w - 30, textY_B);
+            ctx.fillText('👑', x + w - 40, textY_B);
         }
 
-        ctx.fillStyle = '#555';
-        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#666';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
         ctx.fillText('VS', x + w/2, y + h/2 + 5);
     }
 }
