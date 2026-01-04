@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
-    .setDescription('[ADMIN] Genera las llaves de eliminatorias')
+    .setDescription('[ADMIN] Genera Playoffs usando Gemini IA')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -12,55 +12,38 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     try {
         const tournament = await Tournament.findOne({ status: 'grupos' });
+        if (!tournament) { await interaction.editReply('No hay fase de grupos activa.'); return; }
 
-        if (!tournament) {
-            await interaction.editReply('No hay un torneo en fase de grupos activa.');
-            return;
-        }
+        const sortedA = tournament.groupStandings.A.sort((a, b) => b.wins - a.wins);
+        const sortedB = tournament.groupStandings.B.sort((a, b) => b.wins - a.wins);
 
-        const sortedA = tournament.groupStandings.A.sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-        const sortedB = tournament.groupStandings.B.sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-
-        if (sortedA.length < 2 || sortedB.length < 2) {
-            await interaction.editReply('Cada grupo debe tener al menos 2 equipos.');
-            return;
-        }
-
-        const firstA = sortedA[0].team;
-        const secondA = sortedA[1].team;
-        const firstB = sortedB[0].team;
-        const secondB = sortedB[1].team;
+        if (sortedA.length < 2 || sortedB.length < 2) { await interaction.editReply('Faltan equipos.'); return; }
 
         tournament.playoffs.semifinals = [
-            { teamA: firstA, teamB: secondB, winner: null, scoreA: 0, scoreB: 0, played: false },
-            { teamA: firstB, teamB: secondA, winner: null, scoreA: 0, scoreB: 0, played: false }
+            { teamA: sortedA[0].team, teamB: sortedB[1].team, winner: null, scoreA: 0, scoreB: 0, played: false },
+            { teamA: sortedB[0].team, teamB: sortedA[1].team, winner: null, scoreA: 0, scoreB: 0, played: false }
         ];
-
         tournament.playoffs.final = { teamA: 'TBD', teamB: 'TBD', winner: null, scoreA: 0, scoreB: 0, played: false };
         tournament.playoffs.thirdPlace = { teamA: 'TBD', teamB: 'TBD', winner: null, scoreA: 0, scoreB: 0, played: false };
-
+        
         tournament.status = 'eliminatorias';
         await tournament.save();
         
-        const imageBuffer = await imageGenerator.generatePlayoffsImage({
-            semifinals: tournament.playoffs.semifinals,
-            final: tournament.playoffs.final,
-            thirdPlace: tournament.playoffs.thirdPlace
-        });
-
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs.png'});
+        await interaction.editReply('🎨 Gemini está dibujando el bracket...');
+        
+        const imageBuffer = await imageGenerator.generatePlayoffsImage(tournament.playoffs);
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket-ai.png'});
         
         const embed = new EmbedBuilder()
-            .setTitle('⚔️ FASE ELIMINATORIA')
+            .setTitle('⚔️ PLAYOFFS COCOSCUP')
             .setColor(0xFF4757)
-            .setImage('attachment://playoffs.png')
-            .setFooter({ text: 'CocosCup Oficial' })
+            .setImage('attachment://bracket-ai.png')
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed], files: [attachment] });
+        await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error al generar playoffs.');
+        await interaction.editReply('Error generando playoffs.');
     }
 }

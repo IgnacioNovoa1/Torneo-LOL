@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('ver-grupos')
-    .setDescription('Muestra las tablas de posiciones actuales');
+    .setDescription('Muestra los grupos actuales');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
@@ -13,7 +13,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const tournament = await Tournament.findOne({ status: { $in: ['grupos', 'eliminatorias'] } });
 
         if (!tournament || !tournament.groupStandings) {
-            await interaction.editReply('No hay grupos activos actualmente.');
+            await interaction.editReply('No hay grupos generados.');
             return;
         }
 
@@ -22,19 +22,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             B: tournament.groupStandings.B
         });
 
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'posiciones.png' });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('📊 TABLA DE POSICIONES')
+            .setTitle('TABLA DE GRUPOS')
             .setColor(0x0099ff)
-            .setImage('attachment://posiciones.png')
-            .setFooter({ text: 'Actualizado en tiempo real' })
+            .setImage('attachment://grupos.png')
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error al obtener grupos.');
+        await interaction.editReply('Error mostrando grupos.');
     }
 }

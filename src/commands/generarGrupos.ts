@@ -5,7 +5,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-grupos')
-    .setDescription('[ADMIN] Genera los grupos aleatoriamente')
+    .setDescription('[ADMIN] Genera grupos usando Gemini IA')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -15,61 +15,51 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const teams = await Team.find({ active: true });
 
         if (teams.length < 4) {
-            await interaction.editReply('Se necesitan al menos 4 equipos inscritos.');
+            await interaction.editReply('Se necesitan al menos 4 equipos.');
             return;
         }
-
         if (teams.length % 4 !== 0) {
-            await interaction.editReply(`La cantidad de equipos debe ser múltiplo de 4. Hay ${teams.length}.`);
+            await interaction.editReply(`Equipos: ${teams.length}. Deben ser múltiplo de 4.`);
             return;
         }
 
         const shuffled = teams.sort(() => Math.random() - 0.5);
         const teamsPerGroup = teams.length / 2;
-
         const groupA = shuffled.slice(0, teamsPerGroup).map(t => t.name);
         const groupB = shuffled.slice(teamsPerGroup).map(t => t.name);
 
         let tournament = await Tournament.findOne({ status: { $in: ['inscripciones', 'grupos'] } });
-
-        if (tournament) {
-            tournament.groups.A = groupA;
-            tournament.groups.B = groupB;
-            tournament.groupStandings.A = groupA.map(team => ({ team, wins: 0, losses: 0 })) as any;
-            tournament.groupStandings.B = groupB.map(team => ({ team, wins: 0, losses: 0 })) as any;
-            tournament.status = 'grupos';
-            await tournament.save();
-        } else {
-            tournament = new Tournament({
-                season: `Temporada ${new Date().getFullYear()}`,
-                status: 'grupos',
-                groups: { A: groupA, B: groupB },
-                groupStandings: {
-                    A: groupA.map(team => ({ team, wins: 0, losses: 0 })),
-                    B: groupB.map(team => ({ team, wins: 0, losses: 0 }))
-                }
-            });
-            await tournament.save();
+        if (!tournament) {
+            tournament = new Tournament({ season: 'Season 1', status: 'grupos', groups: { A: [], B: [] }, groupStandings: { A: [], B: [] } });
         }
+        
+        tournament.groups = { A: groupA, B: groupB };
+        tournament.groupStandings = {
+            A: groupA.map(team => ({ team, wins: 0, losses: 0 })),
+            B: groupB.map(team => ({ team, wins: 0, losses: 0 }))
+        };
+        tournament.status = 'grupos';
+        await tournament.save();
+
+        await interaction.editReply('🤖 Gemini está diseñando la tabla...');
 
         const imageBuffer = await imageGenerator.generateGroupsImage({
             A: tournament.groupStandings.A,
             B: tournament.groupStandings.B
         });
 
-        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos.png'});
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-ai.png'});
         
         const embed = new EmbedBuilder()
-            .setTitle('🏆 ¡GRUPOS DEFINIDOS!')
-            .setColor(0xC8AA6E)
-            .setImage('attachment://grupos.png')
-            .setFooter({ text: 'CocosCup Oficial' })
+            .setTitle('🏆 GRUPOS OFICIALES')
+            .setColor(0x00D4FF)
+            .setImage('attachment://grupos-ai.png')
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed], files: [attachment] });
+        await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error al generar grupos. Revisa logs.');
+        await interaction.editReply('Error generando grupos.');
     }
 }

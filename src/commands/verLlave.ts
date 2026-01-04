@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('ver-llave')
-    .setDescription('Muestra el estado de los Playoffs');
+    .setDescription('Muestra la llave de playoffs');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
@@ -13,7 +13,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const tournament = await Tournament.findOne({ status: { $in: ['eliminatorias', 'finalizado'] } });
 
         if (!tournament || !tournament.playoffs) {
-            await interaction.editReply('No hay eliminatorias activas.');
+            await interaction.editReply('No hay eliminatorias generadas.');
             return;
         }
 
@@ -26,16 +26,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('🏆 BRACKET ACTUAL')
+            .setTitle('BRACKET ACTUAL')
             .setColor(0xFFD700)
             .setImage('attachment://bracket.png')
-            .setFooter({ text: 'Rumbo a la final' })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error al mostrar la llave.');
+        await interaction.editReply('Error mostrando la llave.');
     }
 }

@@ -1,13 +1,7 @@
-import puppeteer from 'puppeteer';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import sharp from 'sharp';
 
-const THEME = {
-    bg: '#091428',
-    cardBg: 'rgba(30, 35, 40, 0.9)',
-    gold: '#C8AA6E',
-    blue: '#00d4ff',
-    red: '#ff4757',
-    text: '#F0E6D2'
-};
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 interface GroupData {
     A: { team: string; wins: number; losses: number }[];
@@ -22,108 +16,78 @@ interface PlayoffData {
 
 export class ImageGenerator {
 
-    async generateGroupsImage(data: GroupData): Promise<Buffer> {
-        const html = `<!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
-            <style>
-                body { margin:0; padding: 40px; background: ${THEME.bg}; font-family: 'Oswald', sans-serif; color: ${THEME.text}; }
-                .title { text-align: center; font-size: 60px; color: ${THEME.gold}; margin-bottom: 40px; }
-                .container { display: flex; gap: 40px; }
-                .group { flex: 1; background: ${THEME.cardBg}; border-radius: 10px; padding: 20px; }
-                .group-header { text-align: center; font-size: 40px; margin-bottom: 20px; }
-                .row { display: flex; justify-content: space-between; font-size: 30px; padding: 10px; }
-                .top-2 { color: ${THEME.gold}; font-weight: bold; }
-            </style>
-        </head>
-        <body>
-            <div class="title">Fase de Grupos - CocosCup</div>
-            <div class="container">
-                <div class="group">
-                    <div class="group-header">GRUPO A</div>
-                    ${this.renderGroupRows(data.A)}
-                </div>
-                <div class="group">
-                    <div class="group-header">GRUPO B</div>
-                    ${this.renderGroupRows(data.B)}
-                </div>
-            </div>
-        </body>
-        </html>`;
+    private async svgToPng(svg: string): Promise<Buffer> {
+        try {
+            return await sharp(Buffer.from(svg))
+                .png()
+                .toBuffer();
+        } catch (error) {
+            console.error(error);
+            throw new Error("Fallo en renderizado de imagen");
+        }
+    }
 
-        return this.renderHTMLToImage(html, 1200, 800);
+    private cleanGeminiOutput(text: string): string {
+        return text.replace(/```xml/g, '').replace(/```svg/g, '').replace(/```/g, '').trim();
+    }
+
+    async generateGroupsImage(data: GroupData): Promise<Buffer> {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const prompt = `
+        Genera CÓDIGO SVG puro para una tabla de posiciones de torneo.
+        Dimensiones: 1000x600.
+        Tema: League of Legends Hextech (Fondo #091428, Textos #F0E6D2, Bordes #C8AA6E).
+        Título centrado: "FASE DE GRUPOS - COCOSCUP".
+        DATOS:
+        Grupo A: ${JSON.stringify(data.A)}
+        Grupo B: ${JSON.stringify(data.B)}
+        REGLAS:
+        1. Dos contenedores lado a lado.
+        2. Resalta los 2 primeros de cada grupo.
+        3. Fuente sans-serif.
+        4. Retorna SOLO el código SVG sin markdown.
+        `;
+
+        try {
+            const result = await model.generateContent(prompt);
+            const svgCode = this.cleanGeminiOutput(result.response.text());
+            return await this.svgToPng(svgCode);
+        } catch (error) {
+            console.error(error);
+            return await this.svgToPng(`<svg width="800" height="200"><rect width="100%" height="100%" fill="black"/><text x="10" y="50" fill="white" font-size="30">Error generando imagen</text></svg>`);
+        }
     }
 
     async generatePlayoffsImage(data: PlayoffData): Promise<Buffer> {
-        const html = `<!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
-            <style>
-                body { background: ${THEME.bg}; color: ${THEME.text}; font-family: 'Oswald'; padding: 40px; }
-                .title { text-align: center; font-size: 50px; color: ${THEME.gold}; margin-bottom: 40px; }
-                .match { border: 2px solid ${THEME.gold}; padding: 15px; margin-bottom: 30px; }
-                .winner { color: #00ff00; }
-            </style>
-        </head>
-        <body>
-            <div class="title">PLAYOFFS - COCOSCUP</div>
-            ${this.renderMatch(data.semifinals[0], 'SEMIFINAL 1')}
-            ${this.renderMatch(data.semifinals[1], 'SEMIFINAL 2')}
-            ${this.renderMatch(data.final, 'FINAL')}
-            ${this.renderMatch(data.thirdPlace, 'TERCER LUGAR')}
-        </body>
-        </html>`;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const prompt = `
+        Genera CÓDIGO SVG puro para un Bracket de Playoffs (Semifinales y Final).
+        Dimensiones: 1200x800.
+        Tema: Cyberpunk Dark (#0a0a12, #FF4757, #FFD700).
+        ESTRUCTURA:
+        - Izquierda: Dos cajas (Semifinales).
+        - Centro/Derecha: Una caja (Final).
+        - Abajo Derecha: Una caja (3er Lugar).
+        DATOS:
+        Semi 1: ${data.semifinals[0].teamA} vs ${data.semifinals[0].teamB} (Winner: ${data.semifinals[0].winner || '-'})
+        Semi 2: ${data.semifinals[1].teamA} vs ${data.semifinals[1].teamB} (Winner: ${data.semifinals[1].winner || '-'})
+        Final: ${data.final.teamA} vs ${data.final.teamB} (Winner: ${data.final.winner || '-'})
+        3rd: ${data.thirdPlace.teamA} vs ${data.thirdPlace.teamB}
+        REGLAS:
+        1. Si hay ganador, pon un icono o marca.
+        2. Retorna SOLO el código SVG sin markdown.
+        `;
 
-        return this.renderHTMLToImage(html, 1000, 900);
-    }
-
-    private renderGroupRows(teams: any[]) {
-        return [...teams]
-            .sort((a, b) => b.wins - a.wins || a.losses - b.losses)
-            .map((t, i) => `
-                <div class="row ${i < 2 ? 'top-2' : ''}">
-                    <span>${i + 1}. ${t.team}</span>
-                    <span>${t.wins}W - ${t.losses}L</span>
-                </div>
-            `).join('');
-    }
-
-    private renderMatch(match: any, label: string) {
-        return `
-        <div class="match">
-            <strong>${label}</strong>
-            <div class="${match.winner === match.teamA ? 'winner' : ''}">${match.teamA}</div>
-            <div class="${match.winner === match.teamB ? 'winner' : ''}">${match.teamB}</div>
-        </div>`;
-    }
-
-    private async renderHTMLToImage(html: string, width: number, height: number): Promise<Buffer> {
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-
-        const page = await browser.newPage();
-
-        await page.setViewport({
-            width,
-            height,
-            deviceScaleFactor: 2
-        });
-
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-
-        const buffer = await page.screenshot({
-            type: 'png',
-            fullPage: true
-        });
-
-        await browser.close();
-        return buffer as Buffer;
+        try {
+            const result = await model.generateContent(prompt);
+            const svgCode = this.cleanGeminiOutput(result.response.text());
+            return await this.svgToPng(svgCode);
+        } catch (error) {
+            console.error(error);
+            return await this.svgToPng(`<svg width="800" height="200"><rect width="100%" height="100%" fill="black"/><text x="10" y="50" fill="white" font-size="30">Error generando imagen</text></svg>`);
+        }
     }
 }
 
