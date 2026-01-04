@@ -42,8 +42,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         tournament.status = 'eliminatorias';
         await tournament.save();
         
-        await interaction.editReply('Generando llave de playoffs...');
-        
         const imageBuffer = await imageGenerator.generatePlayoffsImage({
             semifinals: tournament.playoffs.semifinals,
             final: tournament.playoffs.final,
@@ -63,7 +61,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
-        console.error('Error generando playoffs:', error);
-        await interaction.editReply('Error al generar playoffs.');
+        console.error(error);
+        try {
+            await interaction.editReply('Error al generar playoffs.');
+        } catch (e) {}
     }
 }

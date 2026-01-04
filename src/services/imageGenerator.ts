@@ -1,4 +1,12 @@
-import { createCanvas, CanvasRenderingContext2D } from 'canvas';
+import { createCanvas, CanvasRenderingContext2D, registerFont } from 'canvas';
+import path from 'path';
+
+try {
+    const fontPath = path.join(__dirname, '../assets/fonts/font.ttf');
+    registerFont(fontPath, { family: 'TournamentFont' });
+} catch (error) {
+    console.error(error);
+}
 
 const THEME = {
     bgStart: '#091428',
@@ -37,10 +45,10 @@ export class ImageGenerator {
         ctx.strokeStyle = 'rgba(200, 170, 110, 0.1)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        for (let i = 0; i < width; i += 50) {
+        for (let i = 0; i < width; i += 60) {
             ctx.moveTo(i, 0); ctx.lineTo(i, height);
         }
-        for (let i = 0; i < height; i += 50) {
+        for (let i = 0; i < height; i += 60) {
             ctx.moveTo(0, i); ctx.lineTo(width, i);
         }
         ctx.stroke();
@@ -64,7 +72,7 @@ export class ImageGenerator {
         this.drawBackground(ctx, width, height);
 
         ctx.fillStyle = THEME.gold;
-        ctx.font = 'bold 60px Arial';
+        ctx.font = 'bold 60px "TournamentFont"'; 
         ctx.textAlign = 'center';
         ctx.fillText('FASE DE GRUPOS - COCOSCUP', width / 2, 80);
 
@@ -79,7 +87,7 @@ export class ImageGenerator {
 
     private drawGroupStyled(ctx: CanvasRenderingContext2D, title: string, teams: any[], x: number, y: number, width: number, color: string) {
         ctx.fillStyle = color;
-        ctx.font = 'bold 40px Arial';
+        ctx.font = 'bold 40px "TournamentFont"';
         ctx.textAlign = 'center';
         ctx.fillText(title, x + width / 2, y - 20);
 
@@ -96,7 +104,7 @@ export class ImageGenerator {
             }
 
             ctx.fillStyle = index < 2 ? THEME.gold : '#888';
-            ctx.font = 'bold 30px Arial';
+            ctx.font = 'bold 30px "TournamentFont"';
             ctx.textAlign = 'left';
             ctx.fillText(`${index + 1}.`, x + 30, teamY);
 
@@ -126,7 +134,7 @@ export class ImageGenerator {
         this.drawBackground(ctx, width, height);
 
         ctx.fillStyle = THEME.gold;
-        ctx.font = 'bold 60px Arial';
+        ctx.font = 'bold 60px "TournamentFont"';
         ctx.textAlign = 'center';
         ctx.fillText('PLAYOFFS - COCOSCUP', width / 2, 80);
 
@@ -163,7 +171,7 @@ export class ImageGenerator {
         const borderColor = isFinal ? THEME.gold : THEME.blueNeon;
         
         ctx.fillStyle = borderColor;
-        ctx.font = 'bold 20px Arial';
+        ctx.font = 'bold 20px "TournamentFont"';
         ctx.textAlign = 'center';
         ctx.fillText(label, x + w/2, y - 10);
 
@@ -175,7 +183,7 @@ export class ImageGenerator {
 
         const isWinnerA = match.winner === match.teamA;
         ctx.fillStyle = isWinnerA ? THEME.goldBright : '#fff';
-        ctx.font = isWinnerA ? 'bold 24px Arial' : '20px Arial';
+        ctx.font = isWinnerA ? 'bold 24px "TournamentFont"' : '20px "TournamentFont"';
         ctx.textAlign = 'left';
         ctx.fillText(match.teamA === 'TBD' ? '???' : match.teamA, textX, textY_A);
         if(isWinnerA) {
@@ -185,7 +193,7 @@ export class ImageGenerator {
 
         const isWinnerB = match.winner === match.teamB;
         ctx.fillStyle = isWinnerB ? THEME.goldBright : '#fff';
-        ctx.font = isWinnerB ? 'bold 24px Arial' : '20px Arial';
+        ctx.font = isWinnerB ? 'bold 24px "TournamentFont"' : '20px "TournamentFont"';
         ctx.fillText(match.teamB === 'TBD' ? '???' : match.teamB, textX, textY_B);
         if(isWinnerB) {
             ctx.fillStyle = '#0f0';
@@ -193,7 +201,7 @@ export class ImageGenerator {
         }
 
         ctx.fillStyle = '#666';
-        ctx.font = '14px Arial';
+        ctx.font = '14px "TournamentFont"';
         ctx.textAlign = 'center';
         ctx.fillText('VS', x + w/2, y + h/2 + 5);
     }

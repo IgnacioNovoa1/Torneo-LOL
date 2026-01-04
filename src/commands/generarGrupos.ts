@@ -52,8 +52,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await tournament.save();
         }
 
-        await interaction.editReply('Generando imagen de grupos...');
-
         const imageBuffer = await imageGenerator.generateGroupsImage({
             A: tournament.groupStandings.A,
             B: tournament.groupStandings.B
@@ -62,9 +60,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-cocoscup.png'});
         
         const embed = new EmbedBuilder()
-            .setTitle('🏆 ¡GRUPOS DEFINIDOS COCOSCUP!')
+            .setTitle('🏆 GRUPOS DEFINIDOS COCOSCUP')
             .setColor(0xC8AA6E)
-            .setDescription('Los grupos han sido sorteados aleatoriamente.')
+            .setDescription('Sorteo oficial de la fase de grupos.')
             .setImage('attachment://grupos-cocoscup.png')
             .setFooter({ text: 'Sistema Hextech v2.0' })
             .setTimestamp();
@@ -72,7 +70,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
-        console.error('Error generando grupos:', error);
-        await interaction.editReply('Error al generar grupos.');
+        console.error(error);
+        try {
+            await interaction.editReply('Error al generar grupos.');
+        } catch (e) {}
     }
 }
