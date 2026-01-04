@@ -4,7 +4,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
-    .setDescription('[ADMIN] Genera Playoffs instantáneamente')
+    .setDescription('[ADMIN] Genera Playoffs')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -36,13 +36,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle('⚔️ PLAYOFFS COCOSCUP')
             .setColor(0xFF4757)
             .setImage('attachment://bracket.png')
-            .setFooter({ text: 'Sistema Hextech v3.0 (SVG Engine)' })
+            .setFooter({ text: 'Sistema Hextech v4.0' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error generando playoffs.');
+        try {
+            await interaction.editReply('Error generando playoffs.');
+        } catch { }
     }
 }

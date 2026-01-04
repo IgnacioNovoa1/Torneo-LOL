@@ -5,7 +5,7 @@ import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-grupos')
-    .setDescription('[ADMIN] Genera grupos instantáneamente')
+    .setDescription('[ADMIN] Genera grupos aleatoriamente')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -52,13 +52,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .setTitle('🏆 GRUPOS OFICIALES')
             .setColor(0x00D4FF)
             .setImage('attachment://grupos.png')
-            .setFooter({ text: '' })
+            .setFooter({ text: 'Sistema Hextech v4.0' })
             .setTimestamp();
 
         await interaction.editReply({ content: '', embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error(error);
-        await interaction.editReply('Error generando grupos.');
+        try {
+            await interaction.editReply('Error generando grupos.');
+        } catch { }
     }
 }

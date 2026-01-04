@@ -1,9 +1,8 @@
 export const tournamentData = {
     nombre: "CocosCup 3ra edición 2026",
     premios: {
-        primerLugar: "50.000 RP + Skin Victoriosa para cada miembro",
-        segundoLugar: "10.000 RP",
-        tercerLugar: "Un abrazo del organizador"
+        primerLugar: "$50.000 pesos",
+        segundoLugar: "$20.000 pesos"
     },
     fechasImportantes: {
         faseGrupos: "Sábado 15 de Enero - 18:00 HRS Chile",
@@ -14,12 +13,8 @@ export const tournamentData = {
         "Prohibido el uso de chat 'All' para toxicidad.",
         "Pausa máxima de 5 minutos por equipo.",
         "Los equipos deben estar en Discord 15 minutos antes.",
-        "Se juega en el servidor LAS (Latinoamérica Sur)."
-    ],
-    equiposInscritos: [
-        "T1 Fake (Capitán: FakerChileno)",
-        "Los Bronces (Capitán: YasuoMain0/10)",
-        "G2 Latam"
+        "Se juega en el servidor LAS (Latinoamérica Sur).",
+        "Se le realizara el deposito al Lider del grupo, la distribuición del dinero depende de ustedes."
     ],
     estadoActual: "Fase de Inscripciones abierta."
 };
