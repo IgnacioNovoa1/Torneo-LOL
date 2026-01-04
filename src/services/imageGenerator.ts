@@ -1,11 +1,8 @@
-import Replicate from 'replicate';
-import { createCanvas, loadImage, registerFont } from 'canvas';
-import path from 'path';
-import fs from 'fs';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createCanvas, CanvasRenderingContext2D } from 'canvas';
+import fetch from 'node-fetch';
 
-const replicate = new Replicate({
-    auth: process.env.REPLICATE_API_TOKEN || '',
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 interface GroupData {
     A: { team: string; wins: number; losses: number }[];
@@ -20,56 +17,54 @@ interface PlayoffData {
 
 export class ImageGenerator {
     
-    // Generar imagen de grupos con Canvas (más rápido y confiable)
     async generateGroupsImage(groupData: GroupData): Promise<Buffer> {
-        const width = 1200;
-        const height = 800;
-        const canvas = createCanvas(width, height);
-        const ctx = canvas.getContext('2d');
+        try {
+            console.log('Generando imagen de grupos con Canvas...');
 
-        // Fondo degradado
-        const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, '#0f1419');
-        gradient.addColorStop(1, '#1a1f2e');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
+            const width = 1200;
+            const height = 800;
+            const canvas = createCanvas(width, height);
+            const ctx = canvas.getContext('2d');
 
-        // Título
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 60px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('FASE DE GRUPOS', width / 2, 80);
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#0f1419');
+            gradient.addColorStop(1, '#1a1f2e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
 
-        // Línea decorativa
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(width / 2 - 200, 100);
-        ctx.lineTo(width / 2 + 200, 100);
-        ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 60px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('FASE DE GRUPOS', width / 2, 80);
 
-        // Dibujar grupos
-        const startY = 150;
-        const groupWidth = 500;
-        const groupSpacing = 100;
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(width / 2 - 200, 100);
+            ctx.lineTo(width / 2 + 200, 100);
+            ctx.stroke();
 
-        // Grupo A
-        this.drawGroup(ctx, 'GRUPO A', groupData.A, 50, startY, groupWidth, '#00d4ff');
+            const startY = 150;
+            const groupWidth = 500;
 
-        // Grupo B
-        this.drawGroup(ctx, 'GRUPO B', groupData.B, width - 50 - groupWidth, startY, groupWidth, '#ff4757');
+            this.drawGroup(ctx, 'GRUPO A', groupData.A, 50, startY, groupWidth, '#00d4ff');
+            this.drawGroup(ctx, 'GRUPO B', groupData.B, width - 50 - groupWidth, startY, groupWidth, '#ff4757');
 
-        // Footer
-        ctx.fillStyle = '#888888';
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Los 2 mejores equipos de cada grupo clasifican a semifinales', width / 2, height - 30);
+            ctx.fillStyle = '#888888';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Los 2 mejores equipos de cada grupo clasifican a semifinales', width / 2, height - 30);
 
-        return canvas.toBuffer('image/png');
+            return canvas.toBuffer('image/png');
+
+        } catch (error) {
+            console.error('Error generando imagen de grupos:', error);
+            throw error;
+        }
     }
 
     private drawGroup(
-        ctx: any, 
+        ctx: CanvasRenderingContext2D, 
         title: string, 
         teams: Array<{ team: string; wins: number; losses: number }>, 
         x: number, 
@@ -77,138 +72,129 @@ export class ImageGenerator {
         width: number, 
         color: string
     ) {
-        // Header del grupo
         ctx.fillStyle = color;
         ctx.fillRect(x, y, width, 60);
 
         ctx.fillStyle = '#000000';
-        ctx.font = 'bold 32px Arial';
+        ctx.font = 'bold 32px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(title, x + width / 2, y + 42);
 
-        // Fondo de la tabla
         ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.fillRect(x, y + 60, width, teams.length * 70 + 20);
 
-        // Border
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
         ctx.strokeRect(x, y, width, teams.length * 70 + 80);
 
-        // Ordenar por victorias
         const sortedTeams = [...teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
 
-        // Dibujar equipos
         sortedTeams.forEach((team, index) => {
             const teamY = y + 90 + (index * 70);
 
-            // Posición
             ctx.fillStyle = index < 2 ? '#00ff00' : '#666666';
-            ctx.font = 'bold 28px Arial';
+            ctx.font = 'bold 28px sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText(`${index + 1}.`, x + 20, teamY);
 
-            // Nombre del equipo
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 24px sans-serif';
             ctx.fillText(team.team, x + 60, teamY);
 
-            // Record
             ctx.fillStyle = color;
-            ctx.font = 'bold 28px Arial';
+            ctx.font = 'bold 28px sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText(`${team.wins}V - ${team.losses}D`, x + width - 20, teamY);
         });
     }
 
-    // Generar imagen de playoffs
     async generatePlayoffsImage(playoffData: PlayoffData): Promise<Buffer> {
-        const width = 1400;
-        const height = 1000;
-        const canvas = createCanvas(width, height);
-        const ctx = canvas.getContext('2d');
+        try {
+            console.log('🏆 Generando imagen de playoffs con Canvas...');
 
-        // Fondo
-        const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, '#0f1419');
-        gradient.addColorStop(1, '#1a1f2e');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
+            const width = 1400;
+            const height = 1000;
+            const canvas = createCanvas(width, height);
+            const ctx = canvas.getContext('2d');
 
-        // Título
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 70px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🏆 LLAVE DE ELIMINATORIAS', width / 2, 80);
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#0f1419');
+            gradient.addColorStop(1, '#1a1f2e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
 
-        // Línea decorativa
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(width / 2 - 250, 100);
-        ctx.lineTo(width / 2 + 250, 100);
-        ctx.stroke();
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 70px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🏆 LLAVE DE ELIMINATORIAS', width / 2, 80);
 
-        const matchWidth = 350;
-        const matchHeight = 100;
-        const spacing = 150;
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(width / 2 - 250, 100);
+            ctx.lineTo(width / 2 + 250, 100);
+            ctx.stroke();
 
-        // Semifinal 1
-        this.drawMatch(
-            ctx,
-            playoffData.semifinals[0],
-            150,
-            250,
-            matchWidth,
-            matchHeight,
-            'SEMIFINAL 1',
-            '#ff6b6b'
-        );
+            const matchWidth = 350;
+            const matchHeight = 100;
+            const spacing = 150;
 
-        // Semifinal 2
-        this.drawMatch(
-            ctx,
-            playoffData.semifinals[1],
-            150,
-            250 + matchHeight + spacing,
-            matchWidth,
-            matchHeight,
-            'SEMIFINAL 2',
-            '#ff6b6b'
-        );
+            this.drawMatch(
+                ctx,
+                playoffData.semifinals[0],
+                150,
+                250,
+                matchWidth,
+                matchHeight,
+                'SEMIFINAL 1',
+                '#ff6b6b'
+            );
 
-        // Tercer lugar
-        this.drawMatch(
-            ctx,
-            playoffData.thirdPlace,
-            width - 150 - matchWidth,
-            250,
-            matchWidth,
-            matchHeight,
-            '🥉 TERCER LUGAR',
-            '#cd7f32'
-        );
+            this.drawMatch(
+                ctx,
+                playoffData.semifinals[1],
+                150,
+                250 + matchHeight + spacing,
+                matchWidth,
+                matchHeight,
+                'SEMIFINAL 2',
+                '#ff6b6b'
+            );
 
-        // Final
-        this.drawMatch(
-            ctx,
-            playoffData.final,
-            width - 150 - matchWidth,
-            250 + matchHeight + spacing,
-            matchWidth,
-            matchHeight,
-            '🏅 GRAN FINAL',
-            '#ffd700'
-        );
+            this.drawMatch(
+                ctx,
+                playoffData.thirdPlace,
+                width - 150 - matchWidth,
+                250,
+                matchWidth,
+                matchHeight,
+                '🥉 TERCER LUGAR',
+                '#cd7f32'
+            );
 
-        // Conectores
-        this.drawConnectors(ctx, matchWidth, matchHeight, spacing);
+            this.drawMatch(
+                ctx,
+                playoffData.final,
+                width - 150 - matchWidth,
+                250 + matchHeight + spacing,
+                matchWidth,
+                matchHeight,
+                '🏅 GRAN FINAL',
+                '#ffd700'
+            );
 
-        return canvas.toBuffer('image/png');
+            this.drawConnectors(ctx, matchWidth, matchHeight, spacing, width);
+
+            return canvas.toBuffer('image/png');
+
+        } catch (error) {
+            console.error('Error generando imagen de playoffs:', error);
+            throw error;
+        }
     }
 
     private drawMatch(
-        ctx: any,
+        ctx: CanvasRenderingContext2D,
         match: { teamA: string; teamB: string; winner: string | null; played: boolean },
         x: number,
         y: number,
@@ -217,55 +203,54 @@ export class ImageGenerator {
         label: string,
         color: string
     ) {
-        // Label
         ctx.fillStyle = color;
-        ctx.font = 'bold 24px Arial';
+        ctx.font = 'bold 24px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(label, x + width / 2, y - 15);
 
-        // Match box background
         ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.fillRect(x, y, width, height);
 
-        // Border
         ctx.strokeStyle = match.played ? '#00ff00' : color;
         ctx.lineWidth = 3;
         ctx.strokeRect(x, y, width, height);
 
-        // Team A
         const isWinnerA = match.winner === match.teamA;
         ctx.fillStyle = isWinnerA ? '#00ff00' : '#ffffff';
-        ctx.font = isWinnerA ? 'bold 22px Arial' : '20px Arial';
+        ctx.font = isWinnerA ? 'bold 22px sans-serif' : '20px sans-serif';
         ctx.textAlign = 'left';
         const teamAText = match.teamA === 'TBD' ? '???' : match.teamA;
         ctx.fillText(teamAText, x + 20, y + 35);
 
-        // VS
         ctx.fillStyle = '#888888';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 18px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('VS', x + width / 2, y + height / 2 + 5);
 
-        // Team B
         const isWinnerB = match.winner === match.teamB;
         ctx.fillStyle = isWinnerB ? '#00ff00' : '#ffffff';
-        ctx.font = isWinnerB ? 'bold 22px Arial' : '20px Arial';
+        ctx.font = isWinnerB ? 'bold 22px sans-serif' : '20px sans-serif';
         ctx.textAlign = 'left';
         const teamBText = match.teamB === 'TBD' ? '???' : match.teamB;
         ctx.fillText(teamBText, x + 20, y + 75);
 
-        // Winner indicator
         if (match.played && match.winner) {
             ctx.fillStyle = '#00ff00';
-            ctx.font = 'bold 30px Arial';
+            ctx.font = 'bold 30px sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText('✓', x + width - 20, y + height / 2 + 10);
         }
     }
 
-    private drawConnectors(ctx: any, matchWidth: number, matchHeight: number, spacing: number) {
+    private drawConnectors(
+        ctx: CanvasRenderingContext2D, 
+        matchWidth: number, 
+        matchHeight: number, 
+        spacing: number,
+        canvasWidth: number
+    ) {
         const leftX = 150 + matchWidth;
-        const rightX = 1400 - 150 - matchWidth;
+        const rightX = canvasWidth - 150 - matchWidth;
         const midX = (leftX + rightX) / 2;
 
         const sf1Y = 250 + matchHeight / 2;
@@ -277,7 +262,6 @@ export class ImageGenerator {
         ctx.lineWidth = 3;
         ctx.setLineDash([10, 5]);
 
-        // Semifinales a centro
         ctx.beginPath();
         ctx.moveTo(leftX, sf1Y);
         ctx.lineTo(midX, sf1Y);
@@ -285,7 +269,6 @@ export class ImageGenerator {
         ctx.lineTo(leftX, sf2Y);
         ctx.stroke();
 
-        // Centro a finales
         ctx.beginPath();
         ctx.moveTo(midX, thirdY);
         ctx.lineTo(rightX, thirdY);
@@ -299,32 +282,42 @@ export class ImageGenerator {
         ctx.setLineDash([]);
     }
 
-    // Alternativa: Generar con Flux AI (más artístico)
-    async generateGroupsImageWithAI(groupData: GroupData): Promise<string> {
-        const prompt = `Professional esports tournament bracket image, modern design, dark theme with neon accents. 
-        Two groups labeled "GRUPO A" and "GRUPO B". 
-        Teams displayed in ranked order with win/loss records.
-        Clean typography, League of Legends style, tournament quality graphics.
-        NO text in image, pure visual design.`;
-
+    async generateArtisticBanner(tournamentName: string, teams: string[]): Promise<string | null> {
         try {
-            const output = await replicate.run(
-                "black-forest-labs/flux-schnell",
-                {
-                    input: {
-                        prompt: prompt,
-                        num_outputs: 1,
-                        aspect_ratio: "16:9",
-                        output_format: "png",
-                        output_quality: 90
-                    }
-                }
-            ) as string[];
+            console.log('Generando banner artístico con Gemini...');
 
-            return output[0];
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const prompt = `Crea una descripción visual detallada para un banner profesional de esports de League of Legends para el torneo "${tournamentName}".
+
+El banner debe incluir:
+- Estilo visual: futurista, cyberpunk, oscuro con neones azules y rojos
+- Elementos: summoner's rift estilizado, nexus, cristales brillantes
+- Ambiente: competitivo, épico, profesional
+- Colores: principalmente negro, azul neón (#00d4ff), rojo neón (#ff4757), dorado (#ffd700)
+- Texto central: "${tournamentName}"
+- Equipos participantes: ${teams.join(', ')}
+
+NO incluyas texto en la imagen, solo diseño visual puro.
+
+Responde solo con la descripción del diseño.`;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const description = response.text();
+
+            console.log('✅ Descripción generada:', description);
+
+            // Nota: Gemini 2.0 actualmente no genera imágenes directamente
+            // Solo genera descripciones. Para generar imágenes necesitarías:
+            // 1. Usar Imagen 3 (requiere Vertex AI en GCP)
+            // 2. O usar la descripción con otro servicio como DALL-E, Midjourney, etc.
+
+            return description;
+
         } catch (error) {
-            console.error('Error generando imagen con IA:', error);
-            throw error;
+            console.error('Error generando banner con Gemini:', error);
+            return null;
         }
     }
 }

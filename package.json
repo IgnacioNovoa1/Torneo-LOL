@@ -23,6 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "canvas": "^2.11.2",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
@@ -30,9 +31,7 @@
     "mongoose": "^9.0.2",
     "node-fetch": "^3.3.2",
     "socket.io": "^4.8.3",
-    "ws": "^8.18.3",
-    "canvas": "^2.11.2",
-    "replicate": "^0.34.1"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
