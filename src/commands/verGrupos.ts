@@ -1,5 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { Tournament } from '../models/Tournament';
+import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('ver-grupos')
@@ -16,24 +17,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        const formatStandings = (standings: any[]) => {
-            return standings
-                .sort((a, b) => b.wins - a.wins || a.losses - b.losses)
-                .map((s, i) => `${i + 1}. **${s.team}** - ${s.wins}V / ${s.losses}D`)
-                .join('\n') || 'Sin partidos jugados';
-        };
+        const imageBuffer = await imageGenerator.generateGroupsImage({
+            A: tournament.groupStandings.A,
+            B: tournament.groupStandings.B
+        });
+
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos-actualizados.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('📊 FASE DE GRUPOS')
+            .setTitle('FASE DE GRUPOS')
             .setColor(0x0099ff)
-            .addFields(
-                { name: '🔵 GRUPO A', value: formatStandings([...tournament.groupStandings.A]), inline: true },
-                { name: '🔴 GRUPO B', value: formatStandings([...tournament.groupStandings.B]), inline: true }
-            )
+            .setDescription('Posiciones actualizadas')
+            .setImage('attachment://grupos-actualizados.png')
             .setFooter({ text: 'Los 2 mejores de cada grupo clasifican a semifinales' })
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error('Error mostrando grupos:', error);

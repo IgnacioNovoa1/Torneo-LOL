@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, Attachment, AttachmentBuilder } from 'discord.js';
 import { Tournament } from '../models/Tournament';
 import { Team } from '../models/Team';
+import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-grupos')
@@ -51,13 +52,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await tournament.save();
         }
 
+        await interaction.editReply('Generando imagen de grupo...');
+        const imageBuffer = await imageGenerator.generateGroupsImage({
+            A: tournament.groupStandings.A,
+            B: tournament.groupStandings.B
+        });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'grupos.png'});
         const embed = new EmbedBuilder()
-            .setTitle('🎲 FASE DE GRUPOS GENERADA')
+            .setTitle('FASE DE GRUPOS GENERADA')
             .setColor(0x00ff00)
             .addFields(
                 { name: '🔵 GRUPO A', value: groupA.map((t, i) => `${i + 1}. ${t}`).join('\n'), inline: true },
                 { name: '🔴 GRUPO B', value: groupB.map((t, i) => `${i + 1}. ${t}`).join('\n'), inline: true }
             )
+            .setImage('attachment://grupos.png')
             .setFooter({ text: 'Usa /ver-grupos para consultar los grupos' })
             .setTimestamp();
 

@@ -1,5 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { Tournament } from '../models/Tournament';
+import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('generar-playoffs')
@@ -40,7 +41,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         tournament.status = 'eliminatorias';
         await tournament.save();
-
+        await interaction.editReply('Generando llave de playoffs...');
+        
+        const imageBuffer = await imageGenerator.generatePlayoffsImage({
+            semifinals: tournament.playoffs.semifinals,
+            final: tournament.playoffs.final,
+            thirdPlace: tournament.playoffs.thirdPlace
+        });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs.png'});
         const embed = new EmbedBuilder()
             .setTitle('🏆 PLAYOFFS GENERADOS')
             .setColor(0xffd700)

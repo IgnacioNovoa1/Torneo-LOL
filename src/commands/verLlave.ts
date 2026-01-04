@@ -1,5 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { Tournament } from '../models/Tournament';
+import { imageGenerator } from '../services/imageGenerator';
 
 export const data = new SlashCommandBuilder()
     .setName('ver-llave')
@@ -16,29 +17,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        const sf1 = tournament.playoffs.semifinals[0];
-        const sf2 = tournament.playoffs.semifinals[1];
-        const final = tournament.playoffs.final;
-        const third = tournament.playoffs.thirdPlace;
+        const imageBuffer = await imageGenerator.generatePlayoffsImage({
+            semifinals: tournament.playoffs.semifinals,
+            final: tournament.playoffs.final,
+            thirdPlace: tournament.playoffs.thirdPlace
+        });
 
-        const formatMatch = (match: any) => {
-            if (!match || !match.played) return `${match?.teamA || 'TBD'} vs ${match?.teamB || 'TBD'}`;
-            return `~~${match.teamA} vs ${match.teamB}~~ → **${match.winner}**`;
-        };
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'playoffs-actualizados.png' });
 
         const embed = new EmbedBuilder()
             .setTitle('🏆 LLAVE DE ELIMINATORIAS')
             .setColor(0xffd700)
-            .addFields(
-                { name: '⚔️ SEMIFINAL 1', value: formatMatch(sf1), inline: false },
-                { name: '⚔️ SEMIFINAL 2', value: formatMatch(sf2), inline: false },
-                { name: '🥉 TERCER LUGAR', value: formatMatch(third), inline: false },
-                { name: '🏅 GRAN FINAL', value: formatMatch(final), inline: false }
-            )
+            .setDescription('Estado actual del torneo')
+            .setImage('attachment://playoffs-actualizados.png')
             .setFooter({ text: 'Actualizado en tiempo real' })
             .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed], files: [attachment] });
 
     } catch (error) {
         console.error('Error mostrando llave:', error);
