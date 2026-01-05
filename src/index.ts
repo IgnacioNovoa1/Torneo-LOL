@@ -15,6 +15,9 @@ import * as verLlaveCommand from './commands/verLlave';
 import path from 'path';
 import { mapLcuToDraft } from './utils/draftMapper';
 import * as resetTorneoCommand from './commands/resetTorneo';
+import * as setFaseCommand from './commands/setFase';
+import * as confirmarPagoCommand from './commands/confirmarPago';
+import * as agregarJugadorCommand from './commands/agregarJugador';
 
 dotenv.config();
 
@@ -100,6 +103,9 @@ client.on(Events.InteractionCreate, async interaction => {
         else if (commandName === 'avanzar-equipo') await avanzarEquipoCommand.execute(interaction);
         else if (commandName === 'ver-llave') await verLlaveCommand.execute(interaction);
         else if (commandName === 'reset-torneo') await resetTorneoCommand.execute(interaction);
+        else if (commandName == 'set-fase') await setFaseCommand.execute(interaction);
+        else if (commandName == 'agregar-jugador') await agregarJugadorCommand.execute(interaction);
+        else if (commandName == 'confirmar-pago') await confirmarPagoCommand.execute(interaction);
     } catch (error) {
         console.error(`Error ejecutando comando ${commandName}:`, error);
     }
