@@ -13,6 +13,7 @@ interface PlayoffData {
     thirdPlace?: { teamA: string; teamB: string; winner: string | null; played: boolean };
 }
 
+// Paleta CocosCup
 const COLORS = {
     primary: '#FFD700',
     cyan: '#00D9FF',
@@ -28,7 +29,7 @@ const COLORS = {
 
 export class ImageGenerator {
 
-    private getLogoBuffer(): Buffer | null {
+    private getLogoBase64(): string {
         try {
             const paths = [
                 path.join(__dirname, '../../assets/logo.png'),
@@ -39,41 +40,25 @@ export class ImageGenerator {
 
             for (const p of paths) {
                 if (fs.existsSync(p)) {
-                    console.log('Logo encontrado:', p);
-                    return fs.readFileSync(p);
+                    console.log('✅ Logo:', p);
+                    return `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
                 }
             }
+            console.warn('⚠️ Logo no encontrado');
         } catch (e) {
-            console.error(e);
+            console.error('❌ Error logo:', e);
         }
-        return null;
+        return '';
     }
 
-    private async renderFinalImage(svg: string, logoConfig?: { width: number, height: number, left: number, top: number }): Promise<Buffer> {
-        const logoBuffer = this.getLogoBuffer();
-        const baseImage = sharp(Buffer.from(svg));
-
-        if (logoBuffer && logoConfig) {
-            const resizedLogo = await sharp(logoBuffer)
-                .resize(logoConfig.width, logoConfig.height)
-                .toBuffer();
-
-            return await baseImage
-                .composite([{
-                    input: resizedLogo,
-                    top: logoConfig.top,
-                    left: logoConfig.left
-                }])
-                .png()
-                .toBuffer();
-        }
-
-        return await baseImage.png().toBuffer();
+    private async svgToPng(svg: string): Promise<Buffer> {
+        return await sharp(Buffer.from(svg)).png().toBuffer();
     }
 
     async generateGroupsImage(data: GroupData): Promise<Buffer> {
         const width = 1920;
         const height = 1080;
+        const logoB64 = this.getLogoBase64();
 
         const sortedA = [...data.A].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
         const sortedB = [...data.B].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
@@ -82,7 +67,7 @@ export class ImageGenerator {
             const w = 550;
             const headerH = 75;
             const rowH = 65;
-            const totalH = headerH + (teams.length * rowH) + 40;
+            const totalH = headerH + (teams.length * rowH) + 15;
 
             return `
             <g transform="translate(${x}, 400)">
@@ -161,10 +146,17 @@ export class ImageGenerator {
             <rect width="100%" height="100%" fill="url(#bg)"/>
             <rect width="100%" height="100%" fill="url(#hex)"/>
             
+            ${logoB64 ? `
             <g transform="translate(${width / 2}, 110)">
                 <circle cx="0" cy="0" r="80" fill="${COLORS.darkBg}" opacity="0.9"/>
                 <circle cx="0" cy="0" r="80" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
-            </g>
+                <image href="${logoB64}" x="-65" y="-65" width="130" height="130"/>
+            </g>` : `
+            <circle cx="${width / 2}" cy="110" r="80" fill="${COLORS.darkBg}" opacity="0.9"/>
+            <circle cx="${width / 2}" cy="110" r="80" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
+            <text x="${width / 2}" y="125" fill="${COLORS.primary}" font-size="42" 
+                font-weight="bold" font-family="Arial" text-anchor="middle">CC</text>
+            `}
             
             <text x="${width / 2}" y="260" fill="${COLORS.textWhite}" font-size="64" 
                 font-weight="900" font-family="Arial" text-anchor="middle" 
@@ -182,12 +174,13 @@ export class ImageGenerator {
                 font-family="Arial">LOS 2 MEJORES EQUIPOS DE CADA GRUPO CLASIFICAN A SEMIFINALES</text>
         </svg>`;
 
-        return await this.renderFinalImage(svg, { width: 130, height: 130, left: 895, top: 45 });
+        return await this.svgToPng(svg);
     }
 
     async generatePlayoffsImage(data: PlayoffData): Promise<Buffer> {
         const width = 1920;
         const height = 1080;
+        const logoB64 = this.getLogoBase64();
 
         const drawMatch = (x: number, y: number, teamA: string, teamB: string, winner: string | null, label: string, isFinal: boolean = false) => {
             const w = isFinal ? 480 : 380;
@@ -273,10 +266,17 @@ export class ImageGenerator {
             <rect width="100%" height="100%" fill="url(#grid)"/>
             <ellipse cx="${width / 2}" cy="${height / 2}" rx="650" ry="450" fill="url(#glow)"/>
             
+            ${logoB64 ? `
             <g transform="translate(200, 90)">
                 <circle cx="0" cy="0" r="65" fill="${COLORS.darkBg}" opacity="0.9"/>
                 <circle cx="0" cy="0" r="65" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
-            </g>
+                <image href="${logoB64}" x="-54" y="-54" width="108" height="108"/>
+            </g>` : `
+            <circle cx="200" cy="90" r="65" fill="${COLORS.darkBg}" opacity="0.9"/>
+            <circle cx="200" cy="90" r="65" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
+            <text x="200" y="102" fill="${COLORS.primary}" font-size="34" font-weight="bold" 
+                font-family="Arial" text-anchor="middle">CC</text>
+            `}
             
             <text x="${width / 2}" y="100" fill="${COLORS.primary}" font-size="60" font-weight="900" 
                 font-family="Arial" text-anchor="middle" letter-spacing="7">
@@ -314,6 +314,8 @@ export class ImageGenerator {
                 text-anchor="middle" letter-spacing="1">COCOSCUP 2026 • LLAVE OFICIAL</text>
         </svg>`;
 
-        return await this.renderFinalImage(svg, { width: 108, height: 108, left: 146, top: 36 });
+        return await this.svgToPng(svg);
     }
 }
+
+export const imageGenerator = new ImageGenerator();
