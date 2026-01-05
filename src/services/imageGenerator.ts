@@ -13,7 +13,6 @@ interface PlayoffData {
     thirdPlace?: { teamA: string; teamB: string; winner: string | null; played: boolean };
 }
 
-// Paleta CocosCup
 const COLORS = {
     primary: '#FFD700',
     cyan: '#00D9FF',
@@ -29,26 +28,22 @@ const COLORS = {
 
 export class ImageGenerator {
 
-    private getLogoBase64(): string {
-        try {
-            const paths = [
-                path.join(__dirname, '../../assets/logo.png'),
-                path.join(__dirname, '../assets/logo.png'),
-                path.join(process.cwd(), 'src/assets/logo.png'),
-                path.join(process.cwd(), 'dist/assets/logo.png')
-            ];
+    private getLogoPath(): string | null {
+        const paths = [
+            path.join(__dirname, '../../assets/logo.png'),
+            path.join(__dirname, '../assets/logo.png'),
+            path.join(process.cwd(), 'src/assets/logo.png'),
+            path.join(process.cwd(), 'dist/assets/logo.png')
+        ];
 
-            for (const p of paths) {
-                if (fs.existsSync(p)) {
-                    console.log('✅ Logo:', p);
-                    return `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
-                }
+        for (const p of paths) {
+            if (fs.existsSync(p)) {
+                console.log('✅ Logo encontrado:', p);
+                return p;
             }
-            console.warn('⚠️ Logo no encontrado');
-        } catch (e) {
-            console.error('❌ Error logo:', e);
         }
-        return '';
+        console.warn('⚠️ Logo no encontrado en ninguna ruta');
+        return null;
     }
 
     private async svgToPng(svg: string): Promise<Buffer> {
@@ -58,7 +53,7 @@ export class ImageGenerator {
     async generateGroupsImage(data: GroupData): Promise<Buffer> {
         const width = 1920;
         const height = 1080;
-        const logoB64 = this.getLogoBase64();
+        const logoPath = this.getLogoPath();
 
         const sortedA = [...data.A].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
         const sortedB = [...data.B].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
@@ -146,17 +141,8 @@ export class ImageGenerator {
             <rect width="100%" height="100%" fill="url(#bg)"/>
             <rect width="100%" height="100%" fill="url(#hex)"/>
             
-            ${logoB64 ? `
-            <g transform="translate(${width / 2}, 110)">
-                <circle cx="0" cy="0" r="80" fill="${COLORS.darkBg}" opacity="0.9"/>
-                <circle cx="0" cy="0" r="80" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
-                <image href="${logoB64}" x="-65" y="-65" width="130" height="130"/>
-            </g>` : `
             <circle cx="${width / 2}" cy="110" r="80" fill="${COLORS.darkBg}" opacity="0.9"/>
             <circle cx="${width / 2}" cy="110" r="80" fill="none" stroke="${COLORS.primary}" stroke-width="4"/>
-            <text x="${width / 2}" y="125" fill="${COLORS.primary}" font-size="42" 
-                font-weight="bold" font-family="Arial" text-anchor="middle">CC</text>
-            `}
             
             <text x="${width / 2}" y="260" fill="${COLORS.textWhite}" font-size="64" 
                 font-weight="900" font-family="Arial" text-anchor="middle" 
@@ -169,18 +155,40 @@ export class ImageGenerator {
             ${renderGroup(sortedA, 'A', 220, COLORS.cyan)}
             ${renderGroup(sortedB, 'B', 1150, COLORS.magenta)}
             
-            <circle cx="${width / 2 - 300}" cy="990" r="6" fill="${COLORS.success}"/>
-            <text x="${width / 2 - 280}" y="996" fill="${COLORS.textGray}" font-size="19" 
+            <circle cx="${width / 2 - 300}" cy="970" r="6" fill="${COLORS.success}"/>
+            <text x="${width / 2 - 280}" y="976" fill="${COLORS.textGray}" font-size="19" 
                 font-family="Arial">LOS 2 MEJORES EQUIPOS DE CADA GRUPO CLASIFICAN A SEMIFINALES</text>
         </svg>`;
 
-        return await this.svgToPng(svg);
+        const baseImage = await this.svgToPng(svg);
+
+        if (logoPath) {
+            try {
+                const logo = await sharp(logoPath)
+                    .resize(130, 130, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+                    .toBuffer();
+
+                return await sharp(baseImage)
+                    .composite([{
+                        input: logo,
+                        top: 45,
+                        left: Math.floor(width / 2) - 65
+                    }])
+                    .png()
+                    .toBuffer();
+            } catch (err) {
+                console.error('❌ Error al componer logo:', err);
+                return baseImage;
+            }
+        }
+
+        return baseImage;
     }
 
     async generatePlayoffsImage(data: PlayoffData): Promise<Buffer> {
         const width = 1920;
         const height = 1080;
-        const logoB64 = this.getLogoBase64();
+        const logoPath = this.getLogoPath();
 
         const drawMatch = (x: number, y: number, teamA: string, teamB: string, winner: string | null, label: string, isFinal: boolean = false) => {
             const w = isFinal ? 480 : 380;
@@ -266,17 +274,8 @@ export class ImageGenerator {
             <rect width="100%" height="100%" fill="url(#grid)"/>
             <ellipse cx="${width / 2}" cy="${height / 2}" rx="650" ry="450" fill="url(#glow)"/>
             
-            ${logoB64 ? `
-            <g transform="translate(200, 90)">
-                <circle cx="0" cy="0" r="65" fill="${COLORS.darkBg}" opacity="0.9"/>
-                <circle cx="0" cy="0" r="65" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
-                <image href="${logoB64}" x="-54" y="-54" width="108" height="108"/>
-            </g>` : `
             <circle cx="200" cy="90" r="65" fill="${COLORS.darkBg}" opacity="0.9"/>
             <circle cx="200" cy="90" r="65" fill="none" stroke="${COLORS.primary}" stroke-width="3"/>
-            <text x="200" y="102" fill="${COLORS.primary}" font-size="34" font-weight="bold" 
-                font-family="Arial" text-anchor="middle">CC</text>
-            `}
             
             <text x="${width / 2}" y="100" fill="${COLORS.primary}" font-size="60" font-weight="900" 
                 font-family="Arial" text-anchor="middle" letter-spacing="7">
@@ -314,7 +313,29 @@ export class ImageGenerator {
                 text-anchor="middle" letter-spacing="1">COCOSCUP 2026 • LLAVE OFICIAL</text>
         </svg>`;
 
-        return await this.svgToPng(svg);
+        const baseImage = await this.svgToPng(svg);
+
+        if (logoPath) {
+            try {
+                const logo = await sharp(logoPath)
+                    .resize(108, 108, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+                    .toBuffer();
+
+                return await sharp(baseImage)
+                    .composite([{
+                        input: logo,
+                        top: 36,
+                        left: 146
+                    }])
+                    .png()
+                    .toBuffer();
+            } catch (err) {
+                console.error('❌ Error al componer logo:', err);
+                return baseImage;
+            }
+        }
+
+        return baseImage;
     }
 }
 
