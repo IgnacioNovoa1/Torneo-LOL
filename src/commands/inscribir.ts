@@ -3,10 +3,10 @@ import { Team } from '../models/Team';
 
 export const data = new SlashCommandBuilder()
     .setName('inscribir')
-    .setDescription('Registra un equipo (Crea canales y rol)')
+    .setDescription('Registra un equipo y crea su entorno privado')
     .addStringOption(option =>
         option.setName('nombre_equipo')
-            .setDescription('Nombre del equipo')
+            .setDescription('Nombre del equipo (Ej: T1, G2 Esports)')
             .setRequired(true))
     .addUserOption(option =>
         option.setName('capitan')
@@ -14,84 +14,116 @@ export const data = new SlashCommandBuilder()
             .setRequired(true));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guild) return;
-    await interaction.deferReply();
+    if (!interaction.guild) {
+        await interaction.reply('Este comando solo funciona en servidores.');
+        return;
+    }
+    
+    await interaction.deferReply({ ephemeral: false });
 
     const teamName = interaction.options.getString('nombre_equipo', true);
     const captainUser = interaction.options.getUser('capitan', true);
     const guild = interaction.guild;
-    const member = await guild.members.fetch(interaction.user.id);
-    const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+    
+    const executorMember = interaction.member as GuildMember;
+    const isAdmin = executorMember.permissions.has(PermissionFlagsBits.Administrator);
 
-    const safeName = teamName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    const safeName = teamName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-');
 
     try {
-        if (!isAdmin) {
-            const existingCaptain = await Team.findOne({ captainId: captainUser.id, active: true });
-            if (existingCaptain) {
+        const existingName = await Team.findOne({ 
+            name: { $regex: new RegExp(`^${teamName}$`, 'i') } 
+        });
+        
+        if (existingName) {
+            await interaction.editReply(`El nombre de equipo **${existingName.name}** ya está ocupado.`);
+            return;
+        }
+
+        const existingCaptain = await Team.findOne({ captainId: captainUser.id, active: true });
+        
+        if (existingCaptain) {
+            if (isAdmin) {
+                await interaction.followUp({ 
+                    content: `**Aviso de Admin:** El usuario ${captainUser} ya lidera el equipo **${existingCaptain.name}**, pero se permite la creación por tus permisos.`, 
+                    ephemeral: true 
+                });
+            } else {
                 await interaction.editReply(`El usuario ${captainUser} ya es capitán del equipo **${existingCaptain.name}**. Solo se permite un equipo por capitán.`);
                 return;
             }
         }
 
-        const nameTaken = await Team.findOne({ name: teamName });
-        if (nameTaken) {
-            await interaction.editReply(`El nombre **${teamName}** ya está ocupado.`);
-            return;
+        let teamRole;
+        let category;
+
+        try {
+            teamRole = await guild.roles.create({
+                name: teamName,
+                color: 'Blue',
+                reason: `Inscripción por ${interaction.user.tag}`,
+            });
+            
+            category = await guild.channels.create({
+                name: `--- ${teamName} ---`,
+                type: ChannelType.GuildCategory,
+            });
+            
+            await guild.channels.create({
+                name: `chat-${safeName}`,
+                type: ChannelType.GuildText,
+                parent: category.id,
+                permissionOverwrites: [
+                    { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                    { id: teamRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+                    { id: captainUser.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+                    { id: interaction.client.user.id, allow: [PermissionFlagsBits.ViewChannel] }
+                ],
+            });
+            
+            await guild.channels.create({
+                name: `Voz ${teamName}`,
+                type: ChannelType.GuildVoice,
+                parent: category.id,
+                permissionOverwrites: [
+                    { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                    { id: teamRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] }
+                ],
+            });
+            
+            const member = await guild.members.fetch(captainUser.id);
+            await member.roles.add(teamRole);
+            
+            const newTeam = new Team({
+                name: teamName,
+                captainId: captainUser.id,
+                captainName: captainUser.tag,
+                roleId: teamRole.id,
+                categoryId: category.id,
+                paid: false,
+                members: [{ id: captainUser.id, name: captainUser.username, role: 'CAPTAIN' }]
+            });
+
+            await newTeam.save();
+
+            console.log(`Equipo ${teamName} creado.`);
+
+            await interaction.editReply(
+                `**¡Equipo ${teamName} registrado!**\n👤 **Capitán:** ${captainUser}\n**Estado:** Pendiente de pago ($10.000).`
+            );
+
+        } catch (discordError) {
+            console.error("Error Discord:", discordError);
+            if (teamRole) await teamRole.delete().catch(() => {});
+            if (category) await category.delete().catch(() => {});
+            await interaction.editReply('Error crítico creando roles/canales en Discord.');
         }
 
-        const teamRole = await guild.roles.create({
-            name: teamName,
-            color: 'Blue',
-            reason: `Inscripción CocosCup por ${interaction.user.tag}`,
-        });
-
-        const category = await guild.channels.create({
-            name: `--- ${teamName} ---`,
-            type: ChannelType.GuildCategory,
-        });
-
-        await guild.channels.create({
-            name: `chat-${safeName}`,
-            type: ChannelType.GuildText,
-            parent: category.id,
-            permissionOverwrites: [
-                { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: teamRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                { id: captainUser.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
-                { id: interaction.client.user.id, allow: [PermissionFlagsBits.ViewChannel] }
-            ],
-        });
-
-        await guild.channels.create({
-            name: `Voz ${teamName}`,
-            type: ChannelType.GuildVoice,
-            parent: category.id,
-            permissionOverwrites: [
-                { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: teamRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] }
-            ],
-        });
-
-        const captainMember = await guild.members.fetch(captainUser.id);
-        await captainMember.roles.add(teamRole);
-
-        const newTeam = new Team({
-            name: teamName,
-            captainId: captainUser.id,
-            captainName: captainUser.tag,
-            roleId: teamRole.id,
-            categoryId: category.id,
-            paid: false,
-            members: [{ id: captainUser.id, name: captainUser.username, role: 'CAPTAIN' }]
-        });
-
-        await newTeam.save();
-
-        await interaction.editReply(`**Equipo ${teamName} registrado.**\n👤 Capitán: ${captainUser}\n⚠️ **Estado:** Pendiente de pago ($10.000). El capitán puede usar \`/agregar-jugador\` para sumar integrantes.`);
-
-    } catch (error) {
-        console.error(error);
-        await interaction.editReply('Error crítico al crear el equipo.');
+    } catch (dbError) {
+        console.error("Error BD:", dbError);
+        await interaction.editReply("Error de conexión con la base de datos.");
     }
 }

@@ -31,7 +31,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await team.save();
 
         await interaction.editReply(`**¡PAGO CONFIRMADO!**\nEl equipo **${team.name}** ahora está oficialmente inscrito en el torneo.`);
-
     } catch (error) {
         console.error(error);
         await interaction.editReply('Error al confirmar pago.');
