@@ -16,5 +16,4 @@ export const tournamentData = {
         "Se juega en el servidor LAS (Latinoamérica Sur).",
         "Se le realizara el deposito al Lider del grupo, la distribuición del dinero depende de ustedes."
     ],
-    estadoActual: "Fase de Inscripciones abierta."
 };

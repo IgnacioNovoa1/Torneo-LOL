@@ -17,7 +17,7 @@ interface IStanding {
 
 export interface ITournament extends Document {
     season: string;
-    status: 'inscripciones' | 'grupos' | 'eliminatorias' | 'finalizado';
+    status: 'inscripciones' | 'preparacion' | 'grupos' | 'playoffs' | 'finalizado';
     groups: {
         A: string[];
         B: string[];
@@ -29,7 +29,6 @@ export interface ITournament extends Document {
     playoffs: {
         semifinals: IMatch[];
         final: IMatch;
-        thirdPlace?: IMatch;
     };
 }
 
@@ -49,8 +48,12 @@ const standingSchema = new Schema({
 });
 
 const tournamentSchema = new Schema({
-    season: { type: String, required: true, unique: true },
-    status: { type: String, enum: ['inscripciones', 'grupos', 'eliminatorias', 'finalizado'], default: 'inscripciones' },
+    season: { type: String, required: true },
+    status: { 
+        type: String, 
+        enum: ['inscripciones', 'preparacion', 'grupos', 'playoffs', 'finalizado'], 
+        default: 'inscripciones' 
+    },
     groups: {
         A: [{ type: String }],
         B: [{ type: String }]
@@ -61,8 +64,7 @@ const tournamentSchema = new Schema({
     },
     playoffs: {
         semifinals: [matchSchema],
-        final: matchSchema,
-        thirdPlace: matchSchema
+        final: matchSchema
     }
 }, { timestamps: true });
 
