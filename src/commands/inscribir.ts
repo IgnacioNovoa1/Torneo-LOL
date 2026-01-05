@@ -34,7 +34,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .replace(/-+/g, '-');
 
     try {
-        // Validar que el nombre no esté ocupado
         const existingName = await Team.findOne({ 
             name: { $regex: new RegExp(`^${teamName}$`, 'i') } 
         });
@@ -44,7 +43,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
-        // Validar que el capitán designado no tenga ya un equipo
         const existingCaptain = await Team.findOne({ captainId: captainUser.id, active: true });
         
         if (existingCaptain) {
@@ -59,12 +57,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             }
         }
 
-        // **NUEVA VALIDACIÓN: El usuario que ejecuta el comando no puede tener ya un equipo**
         if (!isAdmin) {
             const executorAsCaptain = await Team.findOne({ captainId: interaction.user.id, active: true });
             
-            if (executorAsCapit) {
-                await interaction.editReply(`Ya eres capitán del equipo **${executorAsCapitan.name}**. No puedes crear más de un equipo.`);
+            if (executorAsCaptain) {
+                await interaction.editReply(`Ya eres capitán del equipo **${executorAsCaptain.name}**. No puedes crear más de un equipo.`);
                 return;
             }
 
