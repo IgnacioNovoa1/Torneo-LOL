@@ -128,9 +128,9 @@ export class ImageGenerator {
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:${COLORS.darkBg}"/>
-                    <stop offset="50%" style="stop-color:#0f2847"/>
-                    <stop offset="100%" style="stop-color:${COLORS.darkBg2}"/>
+                    <stop offset="0%" style="stop-color:#1a0b2e"/>
+                    <stop offset="50%" style="stop-color:#16213e"/>
+                    <stop offset="100%" style="stop-color:#0f3460"/>
                 </linearGradient>
                 <pattern id="hex" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
                     <path d="M40 0 L80 20 80 60 40 80 0 60 0 20 Z" fill="none" 
@@ -166,6 +166,7 @@ export class ImageGenerator {
             try {
                 const logo = await sharp(logoPath)
                     .resize(130, 130, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+                    .png()
                     .toBuffer();
 
                 return await sharp(baseImage)
@@ -177,7 +178,7 @@ export class ImageGenerator {
                     .png()
                     .toBuffer();
             } catch (err) {
-                console.error('❌ Error al componer logo:', err);
+                console.error('❌ Error al componer logo en grupos:', err);
                 return baseImage;
             }
         }
