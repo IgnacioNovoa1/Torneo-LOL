@@ -34,6 +34,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .replace(/-+/g, '-');
 
     try {
+        // Validar que el nombre no esté ocupado
         const existingName = await Team.findOne({ 
             name: { $regex: new RegExp(`^${teamName}$`, 'i') } 
         });
@@ -43,6 +44,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return;
         }
 
+        // Validar que el capitán designado no tenga ya un equipo
         const existingCaptain = await Team.findOne({ captainId: captainUser.id, active: true });
         
         if (existingCaptain) {
@@ -53,6 +55,26 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 });
             } else {
                 await interaction.editReply(`El usuario ${captainUser} ya es capitán del equipo **${existingCaptain.name}**. Solo se permite un equipo por capitán.`);
+                return;
+            }
+        }
+
+        // **NUEVA VALIDACIÓN: El usuario que ejecuta el comando no puede tener ya un equipo**
+        if (!isAdmin) {
+            const executorAsCaptain = await Team.findOne({ captainId: interaction.user.id, active: true });
+            
+            if (executorAsCapit) {
+                await interaction.editReply(`Ya eres capitán del equipo **${executorAsCapitan.name}**. No puedes crear más de un equipo.`);
+                return;
+            }
+
+            const executorAsMember = await Team.findOne({ 
+                'members.id': interaction.user.id, 
+                active: true 
+            });
+            
+            if (executorAsMember) {
+                await interaction.editReply(`Ya eres miembro del equipo **${executorAsMember.name}**. No puedes crear otro equipo mientras pertenezcas a uno.`);
                 return;
             }
         }
@@ -112,7 +134,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             console.log(`Equipo ${teamName} creado.`);
 
             await interaction.editReply(
-                `**¡Equipo ${teamName} registrado!**\n👤 **Capitán:** ${captainUser}\n**Estado:** Pendiente de pago ($10.000).`
+                `**¡Equipo ${teamName} registrado!**\n**Capitán:** ${captainUser}\n**Estado:** Pendiente de pago ($10.000).`
             );
 
         } catch (discordError) {
