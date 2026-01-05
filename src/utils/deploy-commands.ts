@@ -9,6 +9,9 @@ import * as generarPlayoffsCommand from '../commands/generarPlayoffs';
 import * as avanzarEquipoCommand from '../commands/avanzarEquipo';
 import * as verLlaveCommand from '../commands/verLlave';
 import * as resetTorneo from '../commands/resetTorneo';
+import * as agregarJugador from '../commands/agregarJugador';
+import * as confirmarPago from '../commands/confirmarPago';
+import * as setFase from '../commands/setFase';
 
 dotenv.config();
 
@@ -28,6 +31,9 @@ const commands = [
     avanzarEquipoCommand.data.toJSON(),
     verLlaveCommand.data.toJSON(),
     resetTorneo.data.toJSON(),
+    agregarJugador.data.toJSON(),
+    confirmarPago.data.toJSON(),
+    setFase.data.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);

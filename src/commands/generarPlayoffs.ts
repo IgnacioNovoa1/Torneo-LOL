@@ -27,7 +27,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             final: { teamA: 'TBD', teamB: 'TBD', winner: null, scoreA: 0, scoreB: 0, played: false }
         };
         
-        tournament.status = 'eliminatorias';
+        tournament.status = 'playoffs';
         await tournament.save();
         
         const imageBuffer = await imageGenerator.generatePlayoffsImage(tournament.playoffs);
