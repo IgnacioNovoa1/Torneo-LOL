@@ -34,7 +34,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const attachment = new AttachmentBuilder(imageBuffer, { name: 'bracket.png'});
         
         const embed = new EmbedBuilder()
-            .setTitle('⚔️ PLAYOFFS COCOSCUP')
+            .setTitle('PLAYOFFS COCOSCUP')
             .setColor(0xC8AA6E)
             .setDescription('**Formato:** Semifinales BO1 • Gran Final BO3')
             .setImage('attachment://bracket.png')

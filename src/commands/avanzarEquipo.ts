@@ -4,7 +4,7 @@ import { Team } from '../models/Team';
 
 export const data = new SlashCommandBuilder()
     .setName('avanzar-equipo')
-    .setDescription('[ADMIN] Registra el ganador de una semifinal y avanza automáticamente')
+    .setDescription('[ADMIN] Registra el ganador de una semifinal y avanza a la final')
     .addIntegerOption(option =>
         option.setName('semifinal')
             .setDescription('Número de semifinal')
@@ -26,10 +26,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const semifinalNum = interaction.options.getInteger('semifinal', true);
         const winner = interaction.options.getString('ganador', true);
 
-        const tournament = await Tournament.findOne({ status: 'eliminatorias' });
+        const tournament = await Tournament.findOne({ status: 'playoffs' });
 
         if (!tournament || !tournament.playoffs) {
-            await interaction.editReply('No hay un torneo activo en fase de eliminatorias.');
+            await interaction.editReply('No hay un torneo activo en fase de playoffs.');
             return;
         }
 
@@ -50,13 +50,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         semifinal.winner = winner;
         semifinal.played = true;
 
-        if (tournament.playoffs.final && tournament.playoffs.thirdPlace) {
+        if (tournament.playoffs.final) {
             if (semifinalNum === 1) {
                 tournament.playoffs.final.teamA = winner;
-                tournament.playoffs.thirdPlace.teamA = loser;
             } else {
                 tournament.playoffs.final.teamB = winner;
-                tournament.playoffs.thirdPlace.teamB = loser;
             }
         }
 
@@ -78,19 +76,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const embed = new EmbedBuilder()
             .setTitle('SEMIFINAL FINALIZADA')
             .setColor(0x00ff00)
-            .setDescription(`**${winner}** avanza a la final`)
+            .setDescription(`**${winner}** avanza a la GRAN FINAL.`)
             .addFields(
                 { name: 'Ganador', value: winner, inline: true },
-                { name: 'Eliminado', value: loser, inline: true },
-                { name: 'Siguiente Partido', value: `${loser} jugará por el tercer lugar`, inline: false }
+                { name: 'Eliminado', value: loser, inline: true }
             )
-            .setFooter({ text: 'Usa /ver-llave para ver la llave actualizada' })
+            .setFooter({ text: 'Usa /ver-llave para ver el bracket actualizado' })
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
-        console.error('Error avanzando equipo:', error);
+        console.error(error);
         await interaction.editReply('Error al avanzar equipo.');
     }
 }
